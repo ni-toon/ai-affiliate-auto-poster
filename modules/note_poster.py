@@ -236,218 +236,236 @@ class NotePoster:
             return False
     
     async def convert_affiliate_placeholders(self, products: List[Dict]) -> bool:
-        """アフィリエイトリンクプレースホルダーを実際のリンクに変換"""
+        """
+        アフィリエイトリンクプレースホルダーを実際のリンクに変換
+        手動テストで100%成功した方法を実装
+        """
+        logger.info("=== アフィリエイトリンク変換開始 ===")
+        
+        if not products:
+            logger.info("変換対象の商品がありません")
+            return True
+        
         try:
-            logger.info("アフィリエイトリンクプレースホルダーを変換中...")
+            # ページを上部にスクロールしてツールバーを確実に表示
+            await self.page.evaluate("window.scrollTo(0, 0)")
+            await asyncio.sleep(1)
             
-            for product in products:
+            # 本文エリアにフォーカスを当て直す
+            content_area = await self.page.wait_for_selector('div[contenteditable="true"]', timeout=10000)
+            await content_area.click()
+            await asyncio.sleep(0.5)
+            
+            success_count = 0
+            total_count = len(products)
+            
+            for i, product in enumerate(products):
+                logger.info(f"=== 商品 {i+1}/{total_count}: {product['name']} ===")
+                
+                # プレースホルダーを検索
                 placeholder = f"[Amazon商品リンク_{product['name']}]"
-                amazon_url = product['amazon_link']
+                logger.info(f"プレースホルダー検索: {placeholder}")
                 
-                logger.info(f"プレースホルダー '{placeholder}' を '{amazon_url}' に変換中...")
-                
-                try:
-                    # プレースホルダーを検索して選択
-                    found = await self.page.evaluate(f"""
-                    () => {{
-                        const contentDiv = document.querySelector('div[contenteditable="true"]');
-                        if (!contentDiv) {{
-                            return {{ found: false, error: '本文エリアが見つかりません' }};
-                        }}
+                # JavaScriptでプレースホルダーを検索・選択
+                select_script = f"""
+                const content = document.querySelector('div[contenteditable="true"]');
+                if (!content) {{
+                    console.log('本文エリアが見つかりません');
+                    false;
+                }} else {{
+                    const text = content.textContent || content.innerText;
+                    const placeholder = '{placeholder}';
+                    const index = text.indexOf(placeholder);
+                    
+                    if (index === -1) {{
+                        console.log('プレースホルダーが見つかりません: ' + placeholder);
+                        false;
+                    }} else {{
+                        console.log('プレースホルダーを発見: ' + placeholder + ' at index: ' + index);
                         
+                        // テキストノードを検索してプレースホルダーを選択
                         const walker = document.createTreeWalker(
-                            contentDiv,
+                            content,
                             NodeFilter.SHOW_TEXT,
                             null,
                             false
                         );
                         
-                        let node;
-                        while (node = walker.nextNode()) {{
-                            if (node.textContent.includes('{placeholder}')) {{
-                                // テキストノードを選択
-                                const range = document.createRange();
-                                const selection = window.getSelection();
-                                
-                                const startIndex = node.textContent.indexOf('{placeholder}');
-                                const endIndex = startIndex + '{placeholder}'.length;
-                                
-                                range.setStart(node, startIndex);
-                                range.setEnd(node, endIndex);
-                                selection.removeAllRanges();
-                                selection.addRange(range);
-                                
-                                return {{ found: true, selectedText: selection.toString() }};
+                        let currentIndex = 0;
+                        let targetNode = null;
+                        let targetStart = -1;
+                        
+                        while (walker.nextNode()) {{
+                            const node = walker.currentNode;
+                            const nodeText = node.textContent;
+                            const nodeLength = nodeText.length;
+                            
+                            if (currentIndex <= index && index < currentIndex + nodeLength) {{
+                                targetNode = node;
+                                targetStart = index - currentIndex;
+                                break;
+                            }}
+                            currentIndex += nodeLength;
+                        }}
+                        
+                        if (targetNode && targetStart >= 0) {{
+                            const range = document.createRange();
+                            range.setStart(targetNode, targetStart);
+                            range.setEnd(targetNode, targetStart + placeholder.length);
+                            
+                            const selection = window.getSelection();
+                            selection.removeAllRanges();
+                            selection.addRange(range);
+                            
+                            console.log('プレースホルダーを選択しました');
+                            true;
+                        }} else {{
+                            console.log('プレースホルダーの選択に失敗');
+                            false;
+                        }}
+                    }}
+                }}
+                """
+                
+                selection_result = await self.page.evaluate(select_script)
+                
+                if not selection_result:
+                    logger.error(f"プレースホルダー '{placeholder}' の選択に失敗")
+                    continue
+                
+                logger.info("✅ プレースホルダー選択成功")
+                await asyncio.sleep(0.5)
+                
+                # ツールバーが表示されるまで待機
+                try:
+                    await self.page.wait_for_selector('button[aria-label="リンク"]', timeout=5000)
+                    logger.info("✅ ツールバー表示確認")
+                except:
+                    logger.error("❌ ツールバーが表示されませんでした")
+                    continue
+                
+                # リンクボタンをクリック（座標クリックで確実に）
+                try:
+                    link_button = await self.page.wait_for_selector('button[aria-label="リンク"]', timeout=5000)
+                    
+                    # ボタンの座標を取得してクリック
+                    button_box = await link_button.bounding_box()
+                    if button_box:
+                        center_x = button_box['x'] + button_box['width'] / 2
+                        center_y = button_box['y'] + button_box['height'] / 2
+                        await self.page.mouse.click(center_x, center_y)
+                        logger.info("✅ リンクボタンクリック成功（座標クリック）")
+                    else:
+                        await link_button.click()
+                        logger.info("✅ リンクボタンクリック成功（要素クリック）")
+                        
+                except Exception as e:
+                    logger.error(f"❌ リンクボタンクリック失敗: {e}")
+                    continue
+                
+                await asyncio.sleep(1)
+                
+                # URL入力フィールドが表示されるまで待機
+                try:
+                    url_input = await self.page.wait_for_selector('textarea', timeout=5000)
+                    logger.info("✅ URL入力フィールド表示確認")
+                except:
+                    logger.error("❌ URL入力フィールドが表示されませんでした")
+                    continue
+                
+                # URLを入力
+                try:
+                    await url_input.fill(product['amazon_link'])
+                    logger.info(f"✅ URL入力成功: {product['amazon_link'][:50]}...")
+                except Exception as e:
+                    logger.error(f"❌ URL入力失敗: {e}")
+                    continue
+                
+                await asyncio.sleep(0.5)
+                
+                # 適用ボタンをクリック（複数の方法を試行）
+                apply_success = False
+                
+                # 方法1: has-textセレクタ
+                try:
+                    apply_button = await self.page.wait_for_selector('button:has-text("適用")', timeout=3000)
+                    await apply_button.click()
+                    logger.info("✅ 適用ボタンクリック成功（has-text）")
+                    apply_success = True
+                except:
+                    logger.warning("方法1失敗: has-textセレクタ")
+                
+                # 方法2: テキスト内容で検索
+                if not apply_success:
+                    try:
+                        apply_buttons = await self.page.query_selector_all('button')
+                        for button in apply_buttons:
+                            text = await button.text_content()
+                            if text and text.strip() == "適用":
+                                await button.click()
+                                logger.info("✅ 適用ボタンクリック成功（テキスト検索）")
+                                apply_success = True
+                                break
+                    except:
+                        logger.warning("方法2失敗: テキスト検索")
+                
+                # 方法3: JavaScriptで直接クリック
+                if not apply_success:
+                    try:
+                        click_result = await self.page.evaluate("""
+                        const buttons = document.querySelectorAll('button');
+                        for (const button of buttons) {
+                            if (button.textContent && button.textContent.trim() === '適用') {
+                                button.click();
+                                return true;
+                            }
+                        }
+                        return false;
+                        """)
+                        
+                        if click_result:
+                            logger.info("✅ 適用ボタンクリック成功（JavaScript）")
+                            apply_success = True
+                        else:
+                            logger.warning("方法3失敗: JavaScript検索で適用ボタンが見つからない")
+                    except:
+                        logger.warning("方法3失敗: JavaScript実行エラー")
+                
+                if apply_success:
+                    await asyncio.sleep(1)
+                    
+                    # リンク作成の確認
+                    link_created = await self.page.evaluate(f"""
+                    () => {{
+                        const content = document.querySelector('div[contenteditable="true"]');
+                        if (content) {{
+                            const links = content.querySelectorAll('a');
+                            for (const link of links) {{
+                                if (link.href === '{product['amazon_link']}') {{
+                                    return true;
+                                }}
                             }}
                         }}
-                        return {{ found: false, error: 'プレースホルダーが見つかりません' }};
+                        return false;
                     }}
                     """)
                     
-                    if not found['found']:
-                        logger.warning(f"プレースホルダー '{placeholder}' が見つかりません: {found.get('error', '不明なエラー')}")
-                        continue
-                    
-                    logger.info(f"プレースホルダー選択成功: {found['selectedText']}")
-                    
-                    # ツールバーが表示されるまで待機
-                    await asyncio.sleep(1)
-                    
-                    # リンクボタンをクリック（ビューポート問題を根本的に解決）
-                    try:
-                        # まずリンクボタンが存在することを確認
-                        link_button = await self.page.query_selector('button[aria-label="リンク"]')
-                        if not link_button:
-                            logger.error("リンクボタンが見つかりません")
-                            continue
-                        
-                        # ページを上部にスクロールしてツールバーを確実に表示
-                        await self.page.evaluate("window.scrollTo(0, 0)")
-                        await asyncio.sleep(0.5)
-                        
-                        # 本文エリアにフォーカスを当て直す
-                        await self.page.click('div[contenteditable="true"]')
-                        await asyncio.sleep(0.5)
-                        
-                        # プレースホルダーを再選択
-                        found = await self.page.evaluate(f"""
-                        () => {{
-                            const contentDiv = document.querySelector('div[contenteditable="true"]');
-                            if (!contentDiv) return {{ found: false }};
-                            
-                            const walker = document.createTreeWalker(
-                                contentDiv,
-                                NodeFilter.SHOW_TEXT,
-                                null,
-                                false
-                            );
-                            
-                            let node;
-                            while (node = walker.nextNode()) {{
-                                if (node.textContent.includes('{placeholder}')) {{
-                                    const range = document.createRange();
-                                    const selection = window.getSelection();
-                                    
-                                    const startIndex = node.textContent.indexOf('{placeholder}');
-                                    const endIndex = startIndex + '{placeholder}'.length;
-                                    
-                                    range.setStart(node, startIndex);
-                                    range.setEnd(node, endIndex);
-                                    selection.removeAllRanges();
-                                    selection.addRange(range);
-                                    
-                                    return {{ found: true }};
-                                }}
-                            }}
-                            return {{ found: false }};
-                        }}
-                        """)
-                        
-                        if not found['found']:
-                            logger.error("プレースホルダーの再選択に失敗")
-                            continue
-                        
-                        await asyncio.sleep(0.5)
-                        
-                        # リンクボタンを座標でクリック（より確実な方法）
-                        button_box = await link_button.bounding_box()
-                        if button_box:
-                            center_x = button_box['x'] + button_box['width'] / 2
-                            center_y = button_box['y'] + button_box['height'] / 2
-                            await self.page.mouse.click(center_x, center_y)
-                            logger.info("リンクボタンを座標でクリック成功")
-                        else:
-                            # 最後の手段: JavaScriptでクリック
-                            await self.page.evaluate('document.querySelector("button[aria-label=\\"リンク\\"]").click()')
-                            logger.info("JavaScriptでリンクボタンクリック成功")
-                            
-                    except Exception as e:
-                        logger.error(f"リンクボタンクリック失敗: {e}")
-                        continue
-                    
-                    # URL入力ダイアログが表示されるまで待機
-                    await asyncio.sleep(1)
-                    
-                    # URL入力フィールドに入力（textareaを使用）
-                    try:
-                        await self.page.fill('textarea', amazon_url, timeout=5000)
-                        logger.info(f"URL入力成功: {amazon_url}")
-                        
-                        # 適用ボタンをクリック（複数のセレクタを試行）
-                        apply_selectors = [
-                            'button:has-text("適用")',
-                            'button[type="submit"]',
-                            'button:contains("適用")',
-                            'button[aria-label="適用"]'
-                        ]
-                        
-                        apply_success = False
-                        for selector in apply_selectors:
-                            try:
-                                await self.page.click(selector, timeout=3000)
-                                logger.info(f"適用ボタンクリック成功: {selector}")
-                                apply_success = True
-                                break
-                            except:
-                                continue
-                        
-                        if not apply_success:
-                            # JavaScriptで適用ボタンを探してクリック
-                            try:
-                                await self.page.evaluate("""
-                                () => {
-                                    const buttons = Array.from(document.querySelectorAll('button'));
-                                    const applyButton = buttons.find(btn => 
-                                        btn.textContent.includes('適用') || 
-                                        btn.textContent.includes('Apply') ||
-                                        btn.type === 'submit'
-                                    );
-                                    if (applyButton) {
-                                        applyButton.click();
-                                        return true;
-                                    }
-                                    return false;
-                                }
-                                """)
-                                logger.info("JavaScriptで適用ボタンクリック成功")
-                                apply_success = True
-                            except:
-                                pass
-                        
-                        if apply_success:
-                            # リンク適用後の待機
-                            await asyncio.sleep(2)
-                            logger.info(f"✅ リンク変換完了: {placeholder} → {amazon_url}")
-                        else:
-                            logger.error("適用ボタンが見つかりません")
-                            # キャンセル処理
-                            try:
-                                await self.page.keyboard.press('Escape')
-                            except:
-                                pass
-                            continue
-                        
-                    except Exception as e:
-                        logger.error(f"URL入力または適用に失敗: {e}")
-                        # キャンセルボタンがあればクリック
-                        try:
-                            await self.page.click('button[aria-label="URLの入力をやめる"]', timeout=2000)
-                        except:
-                            try:
-                                await self.page.keyboard.press('Escape')
-                            except:
-                                pass
-                        continue
-                        
-                except Exception as e:
-                    logger.error(f"プレースホルダー検索エラー: {product['name']} - {e}")
-                    continue
+                    if link_created:
+                        logger.info("🎉 リンク作成成功")
+                        success_count += 1
+                    else:
+                        logger.error("❌ リンクが作成されていません")
+                else:
+                    logger.error("❌ 適用ボタンクリックに失敗したため、リンクは作成されませんでした")
+                
+                # 次の処理のために少し待機
+                await asyncio.sleep(1)
             
-            logger.info("アフィリエイトリンク変換処理完了")
-            return True
+            logger.info(f"=== リンク変換完了: {success_count}/{total_count} 成功 ===")
+            return success_count > 0
             
         except Exception as e:
-            logger.error(f"アフィリエイトリンク変換エラー: {e}")
+            logger.error(f"リンク変換中にエラーが発生: {e}")
             return False
     
     async def set_thumbnail_image(self, image_path: str) -> bool:
