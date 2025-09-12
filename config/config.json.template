@@ -9,10 +9,6 @@
         "username": "your-note-username",
         "password": "your-note-password"
     },
-    "x": {
-        "username": "your-x-username",
-        "password": "your-x-password"
-    },
     "schedule": {
         "daily_posts": 5,
         "start_time": "09:00",
@@ -21,7 +17,7 @@
         "max_interval_minutes": 180
     },
     "browser": {
-        "headless": true
+        "headless": false
     }
 }
 
