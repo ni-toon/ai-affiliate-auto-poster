@@ -12,7 +12,16 @@ import re
 
 class ArticleGenerator:
     def __init__(self, openai_api_key: str):
-        self.client = openai.OpenAI(api_key=openai_api_key)
+        # OpenAI APIキーの検証
+        if not openai_api_key or openai_api_key == "your-openai-api-key-here":
+            raise ValueError("有効なOpenAI APIキーが設定されていません。config.jsonを確認してください。")
+        
+        # OpenAIクライアントの初期化
+        try:
+            self.client = openai.OpenAI(api_key=openai_api_key)
+        except Exception as e:
+            raise ValueError(f"OpenAIクライアントの初期化に失敗しました: {e}")
+            
         self.article_types = ["レビュー", "ハウツー", "商品紹介"]
         self.hashtags_pool = {
             "占い": ["#占い", "#タロット", "#スピリチュアル", "#開運", "#パワーストーン", "#風水"],

@@ -60,21 +60,56 @@ class MainController:
         """設定ファイルを読み込み"""
         try:
             with open(config_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
+                config = json.load(f)
+            
+            # 設定ファイルの検証
+            self.validate_config(config)
+            return config
+            
         except FileNotFoundError:
-            self.logger.error(f"設定ファイル {config_file} が見つかりません")
+            print(f"設定ファイル {config_file} が見つかりません")
             
             # テンプレートファイルが存在するかチェック
             template_file = config_file + ".template"
             if os.path.exists(template_file):
-                self.logger.info(f"テンプレートファイル {template_file} から設定ファイルを作成します")
+                print(f"テンプレートファイル {template_file} から設定ファイルを作成します")
                 # テンプレートをコピー
                 import shutil
                 shutil.copy(template_file, config_file)
-                self.logger.error(f"設定ファイル {config_file} を作成しました。必要な情報を入力してから再実行してください。")
+                print(f"設定ファイル {config_file} を作成しました。必要な情報を入力してから再実行してください。")
                 sys.exit(1)
             else:
                 return self.create_default_config(config_file)
+        except json.JSONDecodeError as e:
+            print(f"設定ファイルのJSON形式が正しくありません: {e}")
+            sys.exit(1)
+        except Exception as e:
+            print(f"設定ファイル読み込みエラー: {e}")
+            sys.exit(1)
+    
+    def validate_config(self, config: Dict):
+        """設定ファイルの内容を検証"""
+        required_keys = {
+            'openai': ['api_key'],
+            'amazon': ['associate_id'],
+            'note': ['username', 'password'],
+            'x': ['username', 'password'],
+            'schedule': ['daily_posts', 'start_time', 'end_time'],
+            'browser': ['headless']
+        }
+        
+        for section, keys in required_keys.items():
+            if section not in config:
+                raise ValueError(f"設定ファイルに '{section}' セクションがありません")
+            
+            for key in keys:
+                if key not in config[section]:
+                    raise ValueError(f"設定ファイルの '{section}' セクションに '{key}' がありません")
+                
+                # プレースホルダー値のチェック
+                value = config[section][key]
+                if isinstance(value, str) and ('your-' in value or 'here' in value):
+                    raise ValueError(f"'{section}.{key}' にプレースホルダー値が設定されています。実際の値を入力してください。")
     
     def create_default_config(self, config_file: str) -> Dict:
         """デフォルト設定を作成"""
