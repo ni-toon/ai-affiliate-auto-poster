@@ -290,13 +290,77 @@ class NotePoster:
                     
                     logger.info(f"プレースホルダー選択成功: {found['selectedText']}")
                     
-                    # ツールバーが表示されるまで少し待機
+                    # ツールバーが表示されるまで待機
                     await asyncio.sleep(1)
                     
-                    # リンクボタンをクリック
+                    # リンクボタンをクリック（ビューポート問題を根本的に解決）
                     try:
-                        await self.page.click('button[aria-label="リンク"]', timeout=5000)
-                        logger.info("リンクボタンクリック成功")
+                        # まずリンクボタンが存在することを確認
+                        link_button = await self.page.query_selector('button[aria-label="リンク"]')
+                        if not link_button:
+                            logger.error("リンクボタンが見つかりません")
+                            continue
+                        
+                        # ページを上部にスクロールしてツールバーを確実に表示
+                        await self.page.evaluate("window.scrollTo(0, 0)")
+                        await asyncio.sleep(0.5)
+                        
+                        # 本文エリアにフォーカスを当て直す
+                        await self.page.click('div[contenteditable="true"]')
+                        await asyncio.sleep(0.5)
+                        
+                        # プレースホルダーを再選択
+                        found = await self.page.evaluate(f"""
+                        () => {{
+                            const contentDiv = document.querySelector('div[contenteditable="true"]');
+                            if (!contentDiv) return {{ found: false }};
+                            
+                            const walker = document.createTreeWalker(
+                                contentDiv,
+                                NodeFilter.SHOW_TEXT,
+                                null,
+                                false
+                            );
+                            
+                            let node;
+                            while (node = walker.nextNode()) {{
+                                if (node.textContent.includes('{placeholder}')) {{
+                                    const range = document.createRange();
+                                    const selection = window.getSelection();
+                                    
+                                    const startIndex = node.textContent.indexOf('{placeholder}');
+                                    const endIndex = startIndex + '{placeholder}'.length;
+                                    
+                                    range.setStart(node, startIndex);
+                                    range.setEnd(node, endIndex);
+                                    selection.removeAllRanges();
+                                    selection.addRange(range);
+                                    
+                                    return {{ found: true }};
+                                }}
+                            }}
+                            return {{ found: false }};
+                        }}
+                        """)
+                        
+                        if not found['found']:
+                            logger.error("プレースホルダーの再選択に失敗")
+                            continue
+                        
+                        await asyncio.sleep(0.5)
+                        
+                        # リンクボタンを座標でクリック（より確実な方法）
+                        button_box = await link_button.bounding_box()
+                        if button_box:
+                            center_x = button_box['x'] + button_box['width'] / 2
+                            center_y = button_box['y'] + button_box['height'] / 2
+                            await self.page.mouse.click(center_x, center_y)
+                            logger.info("リンクボタンを座標でクリック成功")
+                        else:
+                            # 最後の手段: JavaScriptでクリック
+                            await self.page.evaluate('document.querySelector("button[aria-label=\\"リンク\\"]").click()')
+                            logger.info("JavaScriptでリンクボタンクリック成功")
+                            
                     except Exception as e:
                         logger.error(f"リンクボタンクリック失敗: {e}")
                         continue
@@ -309,14 +373,59 @@ class NotePoster:
                         await self.page.fill('textarea', amazon_url, timeout=5000)
                         logger.info(f"URL入力成功: {amazon_url}")
                         
-                        # 適用ボタンをクリック
-                        await self.page.click('button:has-text("適用")', timeout=5000)
-                        logger.info("適用ボタンクリック成功")
+                        # 適用ボタンをクリック（複数のセレクタを試行）
+                        apply_selectors = [
+                            'button:has-text("適用")',
+                            'button[type="submit"]',
+                            'button:contains("適用")',
+                            'button[aria-label="適用"]'
+                        ]
                         
-                        # リンク適用後の待機
-                        await asyncio.sleep(2)
+                        apply_success = False
+                        for selector in apply_selectors:
+                            try:
+                                await self.page.click(selector, timeout=3000)
+                                logger.info(f"適用ボタンクリック成功: {selector}")
+                                apply_success = True
+                                break
+                            except:
+                                continue
                         
-                        logger.info(f"✅ リンク変換完了: {placeholder} → {amazon_url}")
+                        if not apply_success:
+                            # JavaScriptで適用ボタンを探してクリック
+                            try:
+                                await self.page.evaluate("""
+                                () => {
+                                    const buttons = Array.from(document.querySelectorAll('button'));
+                                    const applyButton = buttons.find(btn => 
+                                        btn.textContent.includes('適用') || 
+                                        btn.textContent.includes('Apply') ||
+                                        btn.type === 'submit'
+                                    );
+                                    if (applyButton) {
+                                        applyButton.click();
+                                        return true;
+                                    }
+                                    return false;
+                                }
+                                """)
+                                logger.info("JavaScriptで適用ボタンクリック成功")
+                                apply_success = True
+                            except:
+                                pass
+                        
+                        if apply_success:
+                            # リンク適用後の待機
+                            await asyncio.sleep(2)
+                            logger.info(f"✅ リンク変換完了: {placeholder} → {amazon_url}")
+                        else:
+                            logger.error("適用ボタンが見つかりません")
+                            # キャンセル処理
+                            try:
+                                await self.page.keyboard.press('Escape')
+                            except:
+                                pass
+                            continue
                         
                     except Exception as e:
                         logger.error(f"URL入力または適用に失敗: {e}")
@@ -324,7 +433,10 @@ class NotePoster:
                         try:
                             await self.page.click('button[aria-label="URLの入力をやめる"]', timeout=2000)
                         except:
-                            pass
+                            try:
+                                await self.page.keyboard.press('Escape')
+                            except:
+                                pass
                         continue
                         
                 except Exception as e:
