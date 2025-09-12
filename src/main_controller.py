@@ -63,24 +63,35 @@ class MainController:
                 return json.load(f)
         except FileNotFoundError:
             self.logger.error(f"設定ファイル {config_file} が見つかりません")
-            return self.create_default_config(config_file)
+            
+            # テンプレートファイルが存在するかチェック
+            template_file = config_file + ".template"
+            if os.path.exists(template_file):
+                self.logger.info(f"テンプレートファイル {template_file} から設定ファイルを作成します")
+                # テンプレートをコピー
+                import shutil
+                shutil.copy(template_file, config_file)
+                self.logger.error(f"設定ファイル {config_file} を作成しました。必要な情報を入力してから再実行してください。")
+                sys.exit(1)
+            else:
+                return self.create_default_config(config_file)
     
     def create_default_config(self, config_file: str) -> Dict:
         """デフォルト設定を作成"""
         default_config = {
             "openai": {
-                "api_key": "your-openai-api-key"
+                "api_key": "your-openai-api-key-here"
             },
             "amazon": {
-                "associate_id": "ninomono3-22"
+                "associate_id": "your-amazon-associate-id-here"
             },
             "note": {
-                "username": "ninomono_3",
-                "password": "Tori4150"
+                "username": "your-note-username",
+                "password": "your-note-password"
             },
             "x": {
-                "username": "ninomono3",
-                "password": "haruku1126"
+                "username": "your-x-username",
+                "password": "your-x-password"
             },
             "schedule": {
                 "daily_posts": 5,

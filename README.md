@@ -46,7 +46,8 @@ AIによるアフィリエイト記事の自動生成からnote投稿、X投稿�
     │   ├── note_poster.py      # note投稿
     │   └── x_poster.py         # X投稿
     ├── config/                 # 設定ファイル
-    │   └── config.json         # 各種設定
+    │   ├── config.json.template# 設定ファイルテンプレート
+    │   └── config.json         # 各種設定（作成後）
     ├── data/                   # 生成データ
     │   ├── generated_articles.json # 生成記事
     │   ├── note_posts.json     # note投稿記録
@@ -83,8 +84,13 @@ AIによるアフィリエイト記事の自動生成からnote投稿、X投稿�
     playwright install
     ```
 
-5.  **設定ファイルの編集**:
-    `config/config.json` ファイルを開き、必要に応じて各情報を更新します。
+5.  **設定ファイルの作成と編集**:
+    まず、テンプレートファイルをコピーして設定ファイルを作成します。
+    ```bash
+    cp config/config.json.template config/config.json
+    ```
+    
+    次に、`config/config.json` ファイルを開き、以下の情報を入力します。
     *   `openai.api_key`: ご自身のOpenAI APIキー
     *   `amazon.associate_id`: AmazonアソシエイトのトラッキングID
     *   `note.username`, `note.password`: noteのログイン情報
