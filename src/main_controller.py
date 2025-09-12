@@ -182,13 +182,29 @@ class MainController:
             
             # 4. noteに投稿
             await self.note_poster.start_browser()
-            note_url = await self.note_poster.post_article(article_data)
+            
+            # ログイン
+            if not await self.note_poster.login():
+                self.logger.error("noteログインに失敗")
+                await self.note_poster.close_browser()
+                return False
+            
+            # 記事投稿
+            success = await self.note_poster.post_article(
+                article_data['title'],
+                article_data['content'],
+                article_data['tags']
+            )
+            
             await self.note_poster.close_browser()
             
-            if not note_url:
+            if not success:
                 self.logger.error("note投稿に失敗")
                 self.daily_stats['errors'].append("note投稿失敗")
                 return False
+            
+            # 投稿成功時のURL（実際のURLは取得できないため、成功フラグで判定）
+            note_url = "投稿成功"
             
             self.daily_stats['note_posts_success'] += 1
             self.logger.info(f"note投稿成功: {note_url}")
