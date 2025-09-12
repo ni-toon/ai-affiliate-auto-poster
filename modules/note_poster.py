@@ -129,7 +129,7 @@ class NotePoster:
             logger.error(f"ログインエラー: {e}")
             return False
     
-    async def post_article(self, title, content, tags, thumbnail_path=None):
+    async def post_article(self, title, content, tags, thumbnail_path=None, products=None):
         """記事を投稿する"""
         try:
             logger.info("記事投稿を開始")
@@ -152,7 +152,7 @@ class NotePoster:
                 logger.error(f"タイトル入力に失敗: {e}")
                 return False
             
-            # 本文入力（JavaScriptで直接入力）
+            # 本文入力（アフィリエイトリンクプレースホルダーを含む）
             logger.info("本文を入力中...")
             try:
                 # HTMLエスケープ処理
@@ -185,6 +185,10 @@ class NotePoster:
             except Exception as e:
                 logger.error(f"本文入力に失敗: {e}")
                 return False
+            
+            # アフィリエイトリンクプレースホルダーを実際のリンクに変換
+            if products:
+                await self.convert_affiliate_placeholders(products)
             
             # 少し待機してから公開に進む
             await self.page.wait_for_timeout(2000)
@@ -229,6 +233,148 @@ class NotePoster:
             
         except Exception as e:
             logger.error(f"記事投稿中にエラーが発生: {e}")
+            return False
+    
+    async def convert_affiliate_placeholders(self, products: List[Dict]) -> bool:
+        """アフィリエイトリンクプレースホルダーを実際のリンクに変換"""
+        try:
+            logger.info("アフィリエイトリンクプレースホルダーを変換中...")
+            
+            for product in products:
+                placeholder = f"[Amazon商品リンク_{product['name']}]"
+                amazon_url = product['amazon_link']
+                
+                try:
+                    # プレースホルダーテキストを検索
+                    js_code = f"""
+                    // プレースホルダーテキストを検索
+                    const contentDiv = document.querySelector('div[contenteditable="true"]');
+                    if (!contentDiv) {{
+                        console.log('本文エリアが見つかりません');
+                        false;
+                    }} else {{
+                        const walker = document.createTreeWalker(
+                            contentDiv,
+                            NodeFilter.SHOW_TEXT,
+                            null,
+                            false
+                        );
+                        
+                        let node;
+                        let found = false;
+                        while (node = walker.nextNode()) {{
+                            if (node.textContent.includes('{placeholder}')) {{
+                                // テキストノードを選択
+                                const range = document.createRange();
+                                const selection = window.getSelection();
+                                
+                                const startIndex = node.textContent.indexOf('{placeholder}');
+                                const endIndex = startIndex + '{placeholder}'.length;
+                                
+                                range.setStart(node, startIndex);
+                                range.setEnd(node, endIndex);
+                                selection.removeAllRanges();
+                                selection.addRange(range);
+                                
+                                found = true;
+                                break;
+                            }}
+                        }}
+                        found;
+                    }}
+                    """
+                    
+                    found = await self.page.evaluate(js_code)
+                    
+                    if found:
+                        # リンクボタンをクリック
+                        try:
+                            # noteのリンクボタンを探してクリック
+                            link_selectors = [
+                                'button[aria-label="リンク"]',
+                                'button[title="リンク"]',
+                                'button:has([data-icon="link"])',
+                                '[data-testid="link-button"]'
+                            ]
+                            
+                            link_clicked = False
+                            for selector in link_selectors:
+                                try:
+                                    await self.page.click(selector, timeout=2000)
+                                    link_clicked = True
+                                    logger.info(f"リンクボタンクリック成功: {selector}")
+                                    break
+                                except:
+                                    continue
+                            
+                            if not link_clicked:
+                                logger.warning(f"リンクボタンが見つかりません: {product['name']}")
+                                continue
+                            
+                            # リンクURL入力ダイアログが表示されるまで待機
+                            await asyncio.sleep(1)
+                            
+                            # URL入力フィールドにAmazonリンクを入力
+                            url_selectors = [
+                                'input[placeholder*="URL"]',
+                                'input[type="url"]',
+                                'input[name="url"]',
+                                'input[aria-label*="URL"]'
+                            ]
+                            
+                            url_entered = False
+                            for selector in url_selectors:
+                                try:
+                                    await self.page.fill(selector, amazon_url, timeout=2000)
+                                    url_entered = True
+                                    logger.info(f"URL入力成功: {selector}")
+                                    break
+                                except:
+                                    continue
+                            
+                            if not url_entered:
+                                logger.warning(f"URL入力フィールドが見つかりません: {product['name']}")
+                                continue
+                            
+                            # 適用ボタンをクリック
+                            apply_selectors = [
+                                'button:has-text("適用")',
+                                'button:has-text("OK")',
+                                'button:has-text("確定")',
+                                'button[type="submit"]'
+                            ]
+                            
+                            apply_clicked = False
+                            for selector in apply_selectors:
+                                try:
+                                    await self.page.click(selector, timeout=2000)
+                                    apply_clicked = True
+                                    logger.info(f"適用ボタンクリック成功: {selector}")
+                                    break
+                                except:
+                                    continue
+                            
+                            if apply_clicked:
+                                logger.info(f"アフィリエイトリンク変換成功: {product['name']}")
+                                await asyncio.sleep(1)  # 変換完了を待機
+                            else:
+                                logger.warning(f"適用ボタンが見つかりません: {product['name']}")
+                                
+                        except Exception as e:
+                            logger.error(f"リンク変換処理エラー: {product['name']} - {e}")
+                            continue
+                    else:
+                        logger.warning(f"プレースホルダーが見つかりません: {placeholder}")
+                        
+                except Exception as e:
+                    logger.error(f"プレースホルダー検索エラー: {product['name']} - {e}")
+                    continue
+            
+            logger.info("アフィリエイトリンク変換処理完了")
+            return True
+            
+        except Exception as e:
+            logger.error(f"アフィリエイトリンク変換エラー: {e}")
             return False
     
     async def set_thumbnail_image(self, image_path: str) -> bool:

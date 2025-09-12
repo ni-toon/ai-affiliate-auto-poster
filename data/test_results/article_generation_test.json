@@ -1,0 +1,30 @@
+{
+  "test_type": "article_generation",
+  "success": true,
+  "article_data": {
+    "title": "ゲッターズ飯田の五星三心占い2024完全版の詳細レビュー！実際に使ってみた感想",
+    "article_type": "レビュー",
+    "category": "占い",
+    "tags": [
+      "#占い",
+      "#開運",
+      "#パワーストーン",
+      "#レビュー",
+      "#口コミ"
+    ],
+    "content_length": 604,
+    "placeholder_count": 2
+  },
+  "products": [
+    {
+      "name": "ゲッターズ飯田の五星三心占い2024完全版",
+      "category": "占い"
+    }
+  ],
+  "image_data": {
+    "prompt": "Create a professional thumbnail image for a Japanese blog article about 占い. \n            \n            Title: ゲッターズ飯田の五星三心占い2024完全版の詳細レビュー！実際に使ってみた感想\n            \n            Style: mystical, spiritual, elegant\n            Visual elements: tarot cards, crystal ball, celestial symbols, purple and gold colors\n            Mood: mysterious and enchanting\n            \n            Requirements:\n            - Size suitable for social media thumbnails (landscape aspect ratio)\n            - Eye-catching and professional design\n            - Clean composition with good contrast\n            - No text overlay needed (text will be added separately)\n            - Colors should be vibrant but not overwhelming\n            - Design should appeal to Japanese audience\n            - High quality, detailed artwork\n            - Modern and appealing visual style\n            ",
+    "output_path": "/home/ubuntu/ai-affiliate-auto-poster/data/thumbnails/ゲッターズ飯田の五星三心占い2024完全版の詳細レビュー実際に使ってみた感想_占い.png",
+    "category": "占い",
+    "title": "ゲッターズ飯田の五星三心占い2024完全版の詳細レビュー！実際に使ってみた感想"
+  }
+}

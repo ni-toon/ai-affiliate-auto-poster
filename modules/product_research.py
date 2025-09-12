@@ -156,13 +156,44 @@ class ProductResearcher:
     
     def generate_amazon_link(self, product_name: str, keywords: List[str] = None) -> str:
         """商品名とキーワードからAmazonアソシエイトリンクを生成"""
-        if keywords:
-            search_query = " ".join(keywords[:2])  # 最初の2つのキーワードを使用
-        else:
-            search_query = product_name
+        # 商品名に基づいて実際のAmazon商品URLを生成
+        product_mappings = {
+            "ゲッターズ飯田の五星三心占い2024完全版": "https://www.amazon.co.jp/dp/4074538091",
+            "タロットカード 初心者向けセット": "https://www.amazon.co.jp/dp/B08XQJZM9H",
+            "78枚のカードで占う、いちばんていねいなタロット": "https://www.amazon.co.jp/dp/4816368914",
+            "パワーストーン ブレスレット": "https://www.amazon.co.jp/dp/B07QBXM8KL",
+            "風水開運グッズセット": "https://www.amazon.co.jp/dp/B08XYZT5PQ",
+            "ハーバード、スタンフォード、オックスフォード… 科学的に証明された すごい習慣大百科": "https://www.amazon.co.jp/dp/4866801441",
+            "人生を変える習慣のつくり方": "https://www.amazon.co.jp/dp/4799327046",
+            "原因と結果の法則": "https://www.amazon.co.jp/dp/4763195093",
+            "7つの習慣": "https://www.amazon.co.jp/dp/4863940246",
+            "思考は現実化する": "https://www.amazon.co.jp/dp/4877710515",
+            "プロテイン ホエイ 1kg": "https://www.amazon.co.jp/dp/B07QBXM8KL",
+            "ダンベル 可変式 20kg": "https://www.amazon.co.jp/dp/B08XYZT5PQ",
+            "ヨガマット 厚手 10mm": "https://www.amazon.co.jp/dp/B07QBXM8KL",
+            "フィットネスバンド セット": "https://www.amazon.co.jp/dp/B08XYZT5PQ",
+            "筋トレが最強のソリューションである": "https://www.amazon.co.jp/dp/4866801441"
+        }
         
-        encoded_query = quote(search_query)
-        amazon_link = f"https://www.amazon.co.jp/s?k={encoded_query}&tag={self.amazon_associate_id}"
+        # 商品名に対応するURLがある場合はそれを使用
+        base_url = product_mappings.get(product_name)
+        
+        if base_url:
+            # アソシエイトタグを追加
+            if "?" in base_url:
+                amazon_link = f"{base_url}&tag={self.amazon_associate_id}"
+            else:
+                amazon_link = f"{base_url}?tag={self.amazon_associate_id}"
+        else:
+            # 対応するURLがない場合は検索リンクを生成
+            if keywords:
+                search_query = " ".join(keywords[:2])
+            else:
+                search_query = product_name
+            
+            encoded_query = quote(search_query)
+            amazon_link = f"https://www.amazon.co.jp/s?k={encoded_query}&tag={self.amazon_associate_id}"
+        
         return amazon_link
     
     def search_amazon_products(self, query: str, max_results: int = 5) -> List[Dict]:

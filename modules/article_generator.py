@@ -214,7 +214,7 @@ class ArticleGenerator:
         return fallback_content
     
     def insert_affiliate_links(self, content: str, products: List[Dict]) -> str:
-        """記事中にアフィリエイトリンクを自然に挿入"""
+        """記事中にアフィリエイトリンクプレースホルダーを自然に挿入"""
         # アフィリエイト免責事項を冒頭に追加
         disclaimer = "※本記事にはアフィリエイトリンクを含みます\n\n"
         
@@ -225,25 +225,26 @@ class ArticleGenerator:
         for i, section in enumerate(sections):
             modified_sections.append(section)
             
-            # メリット部分の後にアフィリエイトリンクを挿入
+            # メリット部分の後にアフィリエイトリンクプレースホルダーを挿入
             if '## メリット' in section or 'メリット' in section:
                 if products:
                     product = products[0]
-                    link_section = f"▼ {product['name']} - Amazon詳細ページ\n{product['amazon_link']}"
+                    # プレースホルダーを使用（note投稿時にPlaywrightで実際のリンクに変換）
+                    link_section = f"▼ {product['name']} - [Amazon商品リンク_{product['name']}]"
                     modified_sections.append(link_section)
             
-            # まとめ部分の前に追加のアフィリエイトリンクを挿入
+            # まとめ部分の前に追加のアフィリエイトリンクプレースホルダーを挿入
             elif '## まとめ' in section or 'まとめ' in section:
                 if len(products) > 1:
-                    for product in products[1:]:
-                        link_section = f"▼ {product['name']} - Amazon詳細ページ\n{product['amazon_link']}"
+                    for j, product in enumerate(products[1:], 1):
+                        link_section = f"▼ {product['name']} - [Amazon商品リンク_{product['name']}]"
                         modified_sections.insert(-1, link_section)
         
         # もしメリットやまとめが見つからない場合は、記事の最後に追加
-        has_links = any('Amazon詳細ページ' in section for section in modified_sections)
+        has_links = any('[Amazon商品リンク_' in section for section in modified_sections)
         if not has_links and products:
             for product in products:
-                link_section = f"▼ {product['name']} - Amazon詳細ページ\n{product['amazon_link']}"
+                link_section = f"▼ {product['name']} - [Amazon商品リンク_{product['name']}]"
                 modified_sections.append(link_section)
         
         return disclaimer + '\n\n'.join(modified_sections)
