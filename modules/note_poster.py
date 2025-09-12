@@ -235,23 +235,33 @@ class NotePoster:
                     await self.page.click(selector)
                     await asyncio.sleep(1)
                     
-                    # 既存のコンテンツをクリア
-                    await self.page.keyboard.press('Control+a')
-                    await self.page.keyboard.press('Delete')
+                    # より安全な方法でコンテンツを入力
+                    # まず既存のコンテンツをクリア
+                    await self.page.fill(selector, '')
                     await asyncio.sleep(1)
                     
                     # 新しいコンテンツを入力
-                    await self.page.type(selector, content, delay=50)
+                    await self.page.fill(selector, content)
                     print(f"本文入力成功: {selector}")
-                    
-                    # リンクを自動でクリック可能にする処理
-                    await self.process_links_in_content()
                     
                     content_filled = True
                     break
                 except Exception as e:
                     print(f"本文セレクタ {selector} でエラー: {e}")
-                    continue
+                    # fillが使えない場合は従来の方法を試行
+                    try:
+                        await self.page.click(selector)
+                        await asyncio.sleep(1)
+                        await self.page.keyboard.press('Control+a')
+                        await self.page.keyboard.press('Delete')
+                        await asyncio.sleep(1)
+                        await self.page.type(selector, content, delay=30)
+                        print(f"本文入力成功（代替方法）: {selector}")
+                        content_filled = True
+                        break
+                    except Exception as e2:
+                        print(f"代替方法でもエラー: {e2}")
+                        continue
             
             if not content_filled:
                 print("本文入力フィールドが見つかりません")
@@ -265,29 +275,6 @@ class NotePoster:
         except Exception as e:
             print(f"記事内容入力エラー: {e}")
             return False
-    
-    async def process_links_in_content(self):
-        """本文中のURLをリンク化する処理"""
-        try:
-            print("URLのリンク化を実行中...")
-            await asyncio.sleep(2)
-            
-            # URLパターンを検索してリンク化
-            # Ctrl+Fでhttpsを検索
-            await self.page.keyboard.press('Control+f')
-            await asyncio.sleep(1)
-            await self.page.keyboard.type('https://')
-            await asyncio.sleep(1)
-            await self.page.keyboard.press('Escape')
-            
-            # URLを選択してリンク化（noteの場合、URLは自動でリンクになることが多い）
-            # 手動でリンク化が必要な場合のための待機時間
-            await asyncio.sleep(3)
-            
-            print("リンク処理完了")
-            
-        except Exception as e:
-            print(f"リンク処理エラー: {e}")
     
     async def add_tags(self, tags: List[str]) -> bool:
         """タグを追加"""
