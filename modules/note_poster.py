@@ -244,15 +244,17 @@ class NotePoster:
                 placeholder = f"[Amazon商品リンク_{product['name']}]"
                 amazon_url = product['amazon_link']
                 
+                logger.info(f"プレースホルダー '{placeholder}' を '{amazon_url}' に変換中...")
+                
                 try:
-                    # プレースホルダーテキストを検索
-                    js_code = f"""
-                    // プレースホルダーテキストを検索
-                    const contentDiv = document.querySelector('div[contenteditable="true"]');
-                    if (!contentDiv) {{
-                        console.log('本文エリアが見つかりません');
-                        false;
-                    }} else {{
+                    # プレースホルダーを検索して選択
+                    found = await self.page.evaluate(f"""
+                    () => {{
+                        const contentDiv = document.querySelector('div[contenteditable="true"]');
+                        if (!contentDiv) {{
+                            return {{ found: false, error: '本文エリアが見つかりません' }};
+                        }}
+                        
                         const walker = document.createTreeWalker(
                             contentDiv,
                             NodeFilter.SHOW_TEXT,
@@ -261,7 +263,6 @@ class NotePoster:
                         );
                         
                         let node;
-                        let found = false;
                         while (node = walker.nextNode()) {{
                             if (node.textContent.includes('{placeholder}')) {{
                                 // テキストノードを選択
@@ -276,95 +277,55 @@ class NotePoster:
                                 selection.removeAllRanges();
                                 selection.addRange(range);
                                 
-                                found = true;
-                                break;
+                                return {{ found: true, selectedText: selection.toString() }};
                             }}
                         }}
-                        found;
+                        return {{ found: false, error: 'プレースホルダーが見つかりません' }};
                     }}
-                    """
+                    """)
                     
-                    found = await self.page.evaluate(js_code)
+                    if not found['found']:
+                        logger.warning(f"プレースホルダー '{placeholder}' が見つかりません: {found.get('error', '不明なエラー')}")
+                        continue
                     
-                    if found:
-                        # リンクボタンをクリック
+                    logger.info(f"プレースホルダー選択成功: {found['selectedText']}")
+                    
+                    # ツールバーが表示されるまで少し待機
+                    await asyncio.sleep(1)
+                    
+                    # リンクボタンをクリック
+                    try:
+                        await self.page.click('button[aria-label="リンク"]', timeout=5000)
+                        logger.info("リンクボタンクリック成功")
+                    except Exception as e:
+                        logger.error(f"リンクボタンクリック失敗: {e}")
+                        continue
+                    
+                    # URL入力ダイアログが表示されるまで待機
+                    await asyncio.sleep(1)
+                    
+                    # URL入力フィールドに入力（textareaを使用）
+                    try:
+                        await self.page.fill('textarea', amazon_url, timeout=5000)
+                        logger.info(f"URL入力成功: {amazon_url}")
+                        
+                        # 適用ボタンをクリック
+                        await self.page.click('button:has-text("適用")', timeout=5000)
+                        logger.info("適用ボタンクリック成功")
+                        
+                        # リンク適用後の待機
+                        await asyncio.sleep(2)
+                        
+                        logger.info(f"✅ リンク変換完了: {placeholder} → {amazon_url}")
+                        
+                    except Exception as e:
+                        logger.error(f"URL入力または適用に失敗: {e}")
+                        # キャンセルボタンがあればクリック
                         try:
-                            # noteのリンクボタンを探してクリック
-                            link_selectors = [
-                                'button[aria-label="リンク"]',
-                                'button[title="リンク"]',
-                                'button:has([data-icon="link"])',
-                                '[data-testid="link-button"]'
-                            ]
-                            
-                            link_clicked = False
-                            for selector in link_selectors:
-                                try:
-                                    await self.page.click(selector, timeout=2000)
-                                    link_clicked = True
-                                    logger.info(f"リンクボタンクリック成功: {selector}")
-                                    break
-                                except:
-                                    continue
-                            
-                            if not link_clicked:
-                                logger.warning(f"リンクボタンが見つかりません: {product['name']}")
-                                continue
-                            
-                            # リンクURL入力ダイアログが表示されるまで待機
-                            await asyncio.sleep(1)
-                            
-                            # URL入力フィールドにAmazonリンクを入力
-                            url_selectors = [
-                                'input[placeholder*="URL"]',
-                                'input[type="url"]',
-                                'input[name="url"]',
-                                'input[aria-label*="URL"]'
-                            ]
-                            
-                            url_entered = False
-                            for selector in url_selectors:
-                                try:
-                                    await self.page.fill(selector, amazon_url, timeout=2000)
-                                    url_entered = True
-                                    logger.info(f"URL入力成功: {selector}")
-                                    break
-                                except:
-                                    continue
-                            
-                            if not url_entered:
-                                logger.warning(f"URL入力フィールドが見つかりません: {product['name']}")
-                                continue
-                            
-                            # 適用ボタンをクリック
-                            apply_selectors = [
-                                'button:has-text("適用")',
-                                'button:has-text("OK")',
-                                'button:has-text("確定")',
-                                'button[type="submit"]'
-                            ]
-                            
-                            apply_clicked = False
-                            for selector in apply_selectors:
-                                try:
-                                    await self.page.click(selector, timeout=2000)
-                                    apply_clicked = True
-                                    logger.info(f"適用ボタンクリック成功: {selector}")
-                                    break
-                                except:
-                                    continue
-                            
-                            if apply_clicked:
-                                logger.info(f"アフィリエイトリンク変換成功: {product['name']}")
-                                await asyncio.sleep(1)  # 変換完了を待機
-                            else:
-                                logger.warning(f"適用ボタンが見つかりません: {product['name']}")
-                                
-                        except Exception as e:
-                            logger.error(f"リンク変換処理エラー: {product['name']} - {e}")
-                            continue
-                    else:
-                        logger.warning(f"プレースホルダーが見つかりません: {placeholder}")
+                            await self.page.click('button[aria-label="URLの入力をやめる"]', timeout=2000)
+                        except:
+                            pass
+                        continue
                         
                 except Exception as e:
                     logger.error(f"プレースホルダー検索エラー: {product['name']} - {e}")
