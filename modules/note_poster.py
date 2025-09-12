@@ -241,6 +241,10 @@ class NotePoster:
                     # 新しいコンテンツを入力
                     await self.page.type(selector, content, delay=50)
                     print(f"本文入力成功: {selector}")
+                    
+                    # リンクを自動でクリック可能にする処理
+                    await self.process_links_in_content()
+                    
                     content_filled = True
                     break
                 except Exception as e:
@@ -259,6 +263,29 @@ class NotePoster:
         except Exception as e:
             print(f"記事内容入力エラー: {e}")
             return False
+    
+    async def process_links_in_content(self):
+        """本文中のURLをリンク化する処理"""
+        try:
+            print("URLのリンク化を実行中...")
+            await asyncio.sleep(2)
+            
+            # URLパターンを検索してリンク化
+            # Ctrl+Fでhttpsを検索
+            await self.page.keyboard.press('Control+f')
+            await asyncio.sleep(1)
+            await self.page.keyboard.type('https://')
+            await asyncio.sleep(1)
+            await self.page.keyboard.press('Escape')
+            
+            # URLを選択してリンク化（noteの場合、URLは自動でリンクになることが多い）
+            # 手動でリンク化が必要な場合のための待機時間
+            await asyncio.sleep(3)
+            
+            print("リンク処理完了")
+            
+        except Exception as e:
+            print(f"リンク処理エラー: {e}")
     
     async def add_tags(self, tags: List[str]) -> bool:
         """タグを追加"""

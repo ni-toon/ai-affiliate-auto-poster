@@ -137,11 +137,19 @@ class ArticleGenerator:
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "あなたは経験豊富なアフィリエイトライターです。読者にとって価値のある、信頼できる記事を書いてください。商品の良い面だけでなく、客観的な視点も含めてください。"},
+                    {"role": "system", "content": """あなたは日本語が母語の経験豊富なアフィリエイトライターです。以下の要件を厳守してください：
+
+1. 自然で読みやすい日本語で書く
+2. 文章の流れを重視し、段落間の繋がりを意識する
+3. 読者目線で有益な情報を提供する
+4. 商品の良い面だけでなく、客観的な視点も含める
+5. 過度な宣伝文句は避け、信頼できる内容にする
+6. 文字数は500-1000文字程度に収める
+7. 見出しは「##」を使用してMarkdown形式で記述する"""},
                     {"role": "user", "content": prompts[article_type]}
                 ],
                 max_tokens=1500,
-                temperature=0.7
+                temperature=0.6  # 温度を下げて一貫性を向上
             )
             
             content = response.choices[0].message.content.strip()
@@ -186,15 +194,15 @@ class ArticleGenerator:
         # アフィリエイト免責事項を冒頭に追加
         disclaimer = "※本記事にはアフィリエイトリンクを含みます\n\n"
         
-        # 商品名の後にリンクを挿入
+        # 商品名の後にリンクを挿入（noteに適した形式）
         modified_content = content
         for product in products:
             product_name = product['name']
             amazon_link = product['amazon_link']
             
-            # 商品名の後にリンクを追加（最初の出現のみ）
+            # 商品名の後にプレーンテキストリンクを追加（最初の出現のみ）
             pattern = f"({re.escape(product_name)})"
-            replacement = f"\\1（[Amazon詳細ページ]({amazon_link})）"
+            replacement = f"\\1\n\n▼ Amazon詳細ページ\n{amazon_link}\n"
             modified_content = re.sub(pattern, replacement, modified_content, count=1)
         
         return disclaimer + modified_content
