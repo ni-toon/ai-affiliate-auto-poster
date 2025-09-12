@@ -47,34 +47,124 @@ class NotePoster:
         """noteにログイン"""
         try:
             logger.info("noteにログイン中...")
+            
+            # まず現在のログイン状態を確認
+            await self.page.goto('https://note.com/')
+            await self.page.wait_for_load_state('networkidle')
+            await asyncio.sleep(2)
+            
+            # ログイン状態の確認（メニューボタンの存在で判定）
+            try:
+                # ログイン済みの場合、メニューボタンが存在する
+                menu_button = await self.page.query_selector('button:has(img[alt="メニュー"])')
+                if menu_button:
+                    logger.info("既にログイン済みです")
+                    self.is_logged_in = True
+                    return True
+            except:
+                pass
+            
+            # ログインページに移動
             await self.page.goto('https://note.com/login')
             await self.page.wait_for_load_state('networkidle')
             await asyncio.sleep(3)
             
+            # ログインページが表示されているか確認
+            current_url = self.page.url
+            if 'login' not in current_url:
+                # 既にログイン済みでリダイレクトされた場合
+                logger.info("既にログイン済みです（リダイレクト確認）")
+                self.is_logged_in = True
+                return True
+            
             # メールアドレス/ユーザー名入力
             try:
-                await self.page.wait_for_selector('input[placeholder="mail@example.com or note ID"]', timeout=10000)
-                await self.page.fill('input[placeholder="mail@example.com or note ID"]', self.username)
-                logger.info("ユーザー名入力成功")
+                # 複数のセレクタを試行
+                selectors = [
+                    'input[placeholder="mail@example.com or note ID"]',
+                    'input[type="email"]',
+                    'input[name="email"]',
+                    'input[placeholder*="mail"]',
+                    'input[placeholder*="メール"]'
+                ]
+                
+                input_filled = False
+                for selector in selectors:
+                    try:
+                        await self.page.wait_for_selector(selector, timeout=5000)
+                        await self.page.fill(selector, self.username)
+                        logger.info(f"ユーザー名入力成功: {selector}")
+                        input_filled = True
+                        break
+                    except:
+                        continue
+                
+                if not input_filled:
+                    logger.error("ユーザー名入力フィールドが見つかりません")
+                    return False
+                    
             except Exception as e:
                 logger.error(f"ユーザー名入力に失敗: {e}")
                 return False
             
             # パスワード入力
             try:
-                await self.page.wait_for_selector('input[aria-label="パスワード"]', timeout=10000)
-                await self.page.fill('input[aria-label="パスワード"]', self.password)
-                logger.info("パスワード入力成功")
+                # 複数のセレクタを試行
+                selectors = [
+                    'input[aria-label="パスワード"]',
+                    'input[type="password"]',
+                    'input[name="password"]',
+                    'input[placeholder*="パスワード"]',
+                    'input[placeholder*="password"]'
+                ]
+                
+                input_filled = False
+                for selector in selectors:
+                    try:
+                        await self.page.wait_for_selector(selector, timeout=5000)
+                        await self.page.fill(selector, self.password)
+                        logger.info(f"パスワード入力成功: {selector}")
+                        input_filled = True
+                        break
+                    except:
+                        continue
+                
+                if not input_filled:
+                    logger.error("パスワード入力フィールドが見つかりません")
+                    return False
+                    
             except Exception as e:
                 logger.error(f"パスワード入力に失敗: {e}")
                 return False
             
             # ログインボタンクリック
             try:
-                await self.page.wait_for_selector('button[type="submit"]', timeout=10000)
-                await self.page.click('button[type="submit"]')
+                # 複数のセレクタを試行
+                selectors = [
+                    'button[type="submit"]',
+                    'button:has-text("ログイン")',
+                    'button:has-text("Login")',
+                    'input[type="submit"]',
+                    'form button'
+                ]
+                
+                button_clicked = False
+                for selector in selectors:
+                    try:
+                        await self.page.wait_for_selector(selector, timeout=5000)
+                        await self.page.click(selector)
+                        logger.info(f"ログインボタンクリック成功: {selector}")
+                        button_clicked = True
+                        break
+                    except:
+                        continue
+                
+                if not button_clicked:
+                    logger.error("ログインボタンが見つかりません")
+                    return False
+                
                 await self.page.wait_for_load_state('networkidle')
-                logger.info("ログインボタンクリック成功")
+                
             except Exception as e:
                 logger.error(f"ログインボタンクリックに失敗: {e}")
                 return False
@@ -82,13 +172,25 @@ class NotePoster:
             # ログイン成功の確認
             await asyncio.sleep(5)
             current_url = self.page.url
+            
+            # URLでの確認
             if 'login' not in current_url and 'note.com' in current_url:
-                logger.info("ログイン成功")
+                logger.info("ログイン成功（URL確認）")
                 self.is_logged_in = True
                 return True
-            else:
-                logger.error(f"ログイン失敗 - 現在のURL: {current_url}")
-                return False
+            
+            # メニューボタンでの確認
+            try:
+                menu_button = await self.page.query_selector('button:has(img[alt="メニュー"])')
+                if menu_button:
+                    logger.info("ログイン成功（メニューボタン確認）")
+                    self.is_logged_in = True
+                    return True
+            except:
+                pass
+            
+            logger.error(f"ログイン失敗 - 現在のURL: {current_url}")
+            return False
                 
         except Exception as e:
             logger.error(f"ログインエラー: {e}")
