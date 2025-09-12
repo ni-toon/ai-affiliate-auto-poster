@@ -46,26 +46,122 @@ class NotePoster:
             print("noteにログイン中...")
             await self.page.goto('https://note.com/login')
             await self.page.wait_for_load_state('networkidle')
+            await asyncio.sleep(3)
             
-            # ログインフォームの入力
-            await self.page.fill('input[name="login_name"]', self.username)
-            await self.page.fill('input[name="password"]', self.password)
+            # メールアドレス/ユーザー名入力フィールドを探す（複数のセレクタを試行）
+            username_selectors = [
+                'input[name="login_name"]',
+                'input[name="email"]',
+                'input[type="email"]',
+                'input[placeholder*="メール"]',
+                'input[placeholder*="email"]',
+                'input[placeholder*="ユーザー"]',
+                'input[data-testid="email"]',
+                '#email',
+                '#login_name',
+                '.email-input',
+                'input[autocomplete="email"]',
+                'input[autocomplete="username"]'
+            ]
             
-            # ログインボタンをクリック
-            await self.page.click('button[type="submit"]')
+            username_filled = False
+            for selector in username_selectors:
+                try:
+                    await self.page.wait_for_selector(selector, timeout=3000)
+                    await self.page.fill(selector, self.username)
+                    print(f"ユーザー名入力成功: {selector}")
+                    username_filled = True
+                    break
+                except Exception as e:
+                    print(f"セレクタ {selector} でエラー: {e}")
+                    continue
+            
+            if not username_filled:
+                print("ユーザー名入力フィールドが見つかりません")
+                print("手動でユーザー名を入力してください（30秒待機）...")
+                await asyncio.sleep(30)
+            
+            # パスワード入力フィールドを探す
+            password_selectors = [
+                'input[name="password"]',
+                'input[type="password"]',
+                'input[placeholder*="パスワード"]',
+                'input[placeholder*="password"]',
+                'input[data-testid="password"]',
+                '#password',
+                '.password-input'
+            ]
+            
+            password_filled = False
+            for selector in password_selectors:
+                try:
+                    await self.page.wait_for_selector(selector, timeout=3000)
+                    await self.page.fill(selector, self.password)
+                    print(f"パスワード入力成功: {selector}")
+                    password_filled = True
+                    break
+                except Exception as e:
+                    print(f"セレクタ {selector} でエラー: {e}")
+                    continue
+            
+            if not password_filled:
+                print("パスワード入力フィールドが見つかりません")
+                print("手動でパスワードを入力してください（30秒待機）...")
+                await asyncio.sleep(30)
+            
+            # ログインボタンを探してクリック
+            login_selectors = [
+                'button[type="submit"]',
+                'input[type="submit"]',
+                'button:has-text("ログイン")',
+                'button:has-text("Login")',
+                'button:has-text("サインイン")',
+                '.login-button',
+                '[data-testid="login-button"]',
+                'button[data-cy="login"]',
+                'form button'
+            ]
+            
+            login_clicked = False
+            for selector in login_selectors:
+                try:
+                    await self.page.wait_for_selector(selector, timeout=3000)
+                    await self.page.click(selector)
+                    print(f"ログインボタンクリック成功: {selector}")
+                    login_clicked = True
+                    break
+                except Exception as e:
+                    print(f"セレクタ {selector} でエラー: {e}")
+                    continue
+            
+            if not login_clicked:
+                print("ログインボタンが見つかりません")
+                print("手動でログインボタンをクリックしてください（30秒待機）...")
+                await asyncio.sleep(30)
+            
+            # ログイン完了を待つ
+            await asyncio.sleep(5)
             await self.page.wait_for_load_state('networkidle')
             
             # ログイン成功の確認
-            await asyncio.sleep(3)
             current_url = self.page.url
-            
             if 'login' not in current_url and 'note.com' in current_url:
                 print("ログイン成功")
                 self.is_logged_in = True
                 return True
             else:
-                print("ログイン失敗")
-                return False
+                print(f"ログイン失敗 - 現在のURL: {current_url}")
+                print("手動でログインを完了してください（60秒待機）...")
+                await asyncio.sleep(60)
+                
+                # 再度確認
+                current_url = self.page.url
+                if 'login' not in current_url and 'note.com' in current_url:
+                    print("手動ログイン成功")
+                    self.is_logged_in = True
+                    return True
+                else:
+                    return False
                 
         except Exception as e:
             print(f"ログインエラー: {e}")
@@ -88,19 +184,46 @@ class NotePoster:
         try:
             print("記事内容を入力中...")
             
-            # タイトル入力
-            title_selector = 'input[placeholder="タイトル"], textarea[placeholder="タイトル"], [data-testid="title-input"]'
-            await self.page.wait_for_selector(title_selector, timeout=10000)
-            await self.page.fill(title_selector, title)
-            await asyncio.sleep(1)
+            # タイトル入力フィールドを探す
+            title_selectors = [
+                'input[placeholder="タイトル"]',
+                'textarea[placeholder="タイトル"]',
+                '[data-testid="title-input"]',
+                'input[name="title"]',
+                '.title-input',
+                'h1[contenteditable="true"]',
+                '[placeholder*="タイトル"]'
+            ]
             
-            # 本文入力
-            # noteの本文エディタは複数のパターンがあるため、複数のセレクタを試行
+            title_filled = False
+            for selector in title_selectors:
+                try:
+                    await self.page.wait_for_selector(selector, timeout=5000)
+                    await self.page.fill(selector, title)
+                    print(f"タイトル入力成功: {selector}")
+                    title_filled = True
+                    break
+                except Exception as e:
+                    print(f"タイトルセレクタ {selector} でエラー: {e}")
+                    continue
+            
+            if not title_filled:
+                print("タイトル入力フィールドが見つかりません")
+                print("手動でタイトルを入力してください（30秒待機）...")
+                await asyncio.sleep(30)
+            
+            await asyncio.sleep(2)
+            
+            # 本文入力フィールドを探す
             content_selectors = [
                 '[data-testid="editor"]',
                 '.editor-content',
                 '[contenteditable="true"]',
-                'textarea[placeholder="本文を入力"]'
+                'textarea[placeholder="本文を入力"]',
+                'textarea[placeholder*="本文"]',
+                '.note-editor',
+                '[role="textbox"]',
+                'div[contenteditable="true"]'
             ]
             
             content_filled = False
@@ -113,17 +236,21 @@ class NotePoster:
                     # 既存のコンテンツをクリア
                     await self.page.keyboard.press('Control+a')
                     await self.page.keyboard.press('Delete')
+                    await asyncio.sleep(1)
                     
                     # 新しいコンテンツを入力
                     await self.page.type(selector, content, delay=50)
+                    print(f"本文入力成功: {selector}")
                     content_filled = True
                     break
-                except:
+                except Exception as e:
+                    print(f"本文セレクタ {selector} でエラー: {e}")
                     continue
             
             if not content_filled:
                 print("本文入力フィールドが見つかりません")
-                return False
+                print("手動で本文を入力してください（60秒待機）...")
+                await asyncio.sleep(60)
             
             await asyncio.sleep(2)
             print("記事内容の入力完了")
@@ -141,16 +268,20 @@ class NotePoster:
             # タグ入力フィールドを探す
             tag_selectors = [
                 'input[placeholder="タグを追加"]',
+                'input[placeholder*="タグ"]',
                 '[data-testid="tag-input"]',
                 '.tag-input',
-                'input[name="tag"]'
+                'input[name="tag"]',
+                'input[name="tags"]',
+                '.hashtag-input'
             ]
             
             tag_input_found = False
             for selector in tag_selectors:
                 try:
-                    await self.page.wait_for_selector(selector, timeout=5000)
+                    await self.page.wait_for_selector(selector, timeout=3000)
                     tag_input_found = True
+                    print(f"タグ入力フィールド発見: {selector}")
                     
                     for tag in tags:
                         # #を除去してタグを入力
@@ -158,13 +289,18 @@ class NotePoster:
                         await self.page.fill(selector, clean_tag)
                         await self.page.keyboard.press('Enter')
                         await asyncio.sleep(1)
+                        print(f"タグ追加: {clean_tag}")
                     
                     break
-                except:
+                except Exception as e:
+                    print(f"タグセレクタ {selector} でエラー: {e}")
                     continue
             
             if not tag_input_found:
-                print("タグ入力フィールドが見つかりません（スキップ）")
+                print("タグ入力フィールドが見つかりません")
+                print("手動でタグを追加してください（30秒待機）...")
+                print(f"追加するタグ: {', '.join(tags)}")
+                await asyncio.sleep(30)
             else:
                 print("タグ追加完了")
             
@@ -183,23 +319,45 @@ class NotePoster:
             publish_selectors = [
                 'button:has-text("公開する")',
                 'button:has-text("投稿する")',
+                'button:has-text("公開")',
+                'button:has-text("投稿")',
                 '[data-testid="publish-button"]',
-                'button[type="submit"]'
+                'button[type="submit"]',
+                '.publish-button',
+                '.post-button',
+                'button[data-cy="publish"]'
             ]
             
             published = False
             for selector in publish_selectors:
                 try:
-                    await self.page.wait_for_selector(selector, timeout=5000)
+                    await self.page.wait_for_selector(selector, timeout=3000)
                     await self.page.click(selector)
+                    print(f"公開ボタンクリック成功: {selector}")
                     published = True
                     break
-                except:
+                except Exception as e:
+                    print(f"公開セレクタ {selector} でエラー: {e}")
                     continue
             
             if not published:
                 print("公開ボタンが見つかりません")
-                return None
+                print("手動で公開ボタンをクリックしてください（60秒待機）...")
+                await asyncio.sleep(60)
+            
+            # 公開完了を待つ
+            await asyncio.sleep(5)
+            await self.page.wait_for_load_state('networkidle')
+            
+            # 公開後のURLを取得
+            current_url = self.page.url
+            print(f"公開完了 - URL: {current_url}")
+            
+            return current_url
+            
+        except Exception as e:
+            print(f"公開エラー: {e}")
+            return None
             
             # 公開完了を待つ
             await self.page.wait_for_load_state('networkidle')
