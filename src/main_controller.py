@@ -20,7 +20,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from modules.product_research import ProductResearcher
 from modules.article_generator import ArticleGenerator
 from modules.note_poster import NotePoster
-from modules.x_poster import XPoster
 
 class MainController:
     def __init__(self, config_file: str = "config/config.json"):
@@ -42,17 +41,10 @@ class MainController:
             headless=self.config.get('browser', {}).get('headless', True)
         )
         
-        self.x_poster = XPoster(
-            username=self.config['x']['username'],
-            password=self.config['x']['password'],
-            headless=self.config.get('browser', {}).get('headless', True)
-        )
-        
         # 統計情報
         self.daily_stats = {
             'articles_generated': 0,
             'note_posts_success': 0,
-            'x_posts_success': 0,
             'errors': []
         }
     
@@ -201,24 +193,7 @@ class MainController:
             self.daily_stats['note_posts_success'] += 1
             self.logger.info(f"note投稿成功: {note_url}")
             
-            # 5. 投稿間隔を空ける（人間らしい動作のため）
-            wait_time = random.randint(300, 900)  # 5-15分
-            self.logger.info(f"X投稿まで {wait_time}秒待機")
-            await asyncio.sleep(wait_time)
-            
-            # 6. Xに宣伝投稿
-            await self.x_poster.start_browser()
-            x_success = await self.x_poster.post_article_promotion(article_data, note_url)
-            await self.x_poster.close_browser()
-            
-            if x_success:
-                self.daily_stats['x_posts_success'] += 1
-                self.logger.info("X投稿成功")
-            else:
-                self.logger.error("X投稿に失敗")
-                self.daily_stats['errors'].append("X投稿失敗")
-            
-            # 7. 記事データを保存
+            # 5. 記事データを保存
             self.save_article_data(article_data, note_url)
             
             self.logger.info("記事生成・投稿プロセス完了")

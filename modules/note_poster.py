@@ -48,8 +48,11 @@ class NotePoster:
             await self.page.wait_for_load_state('networkidle')
             await asyncio.sleep(3)
             
-            # メールアドレス/ユーザー名入力フィールドを探す（複数のセレクタを試行）
+            # メールアドレス/ユーザー名入力フィールドを探す（現在のUIに対応）
             username_selectors = [
+                'input[placeholder="mail@example.com or note ID"]',
+                'input[placeholder*="mail"]',
+                'input[placeholder*="note ID"]',
                 'input[name="login_name"]',
                 'input[name="email"]',
                 'input[type="email"]',
@@ -58,10 +61,7 @@ class NotePoster:
                 'input[placeholder*="ユーザー"]',
                 'input[data-testid="email"]',
                 '#email',
-                '#login_name',
-                '.email-input',
-                'input[autocomplete="email"]',
-                'input[autocomplete="username"]'
+                '#login_name'
             ]
             
             username_filled = False
@@ -81,15 +81,15 @@ class NotePoster:
                 print("手動でユーザー名を入力してください（30秒待機）...")
                 await asyncio.sleep(30)
             
-            # パスワード入力フィールドを探す
+            # パスワード入力フィールドを探す（現在のUIに対応）
             password_selectors = [
+                'input[aria-label="パスワード"]',
                 'input[name="password"]',
                 'input[type="password"]',
                 'input[placeholder*="パスワード"]',
                 'input[placeholder*="password"]',
                 'input[data-testid="password"]',
-                '#password',
-                '.password-input'
+                '#password'
             ]
             
             password_filled = False
@@ -184,15 +184,16 @@ class NotePoster:
         try:
             print("記事内容を入力中...")
             
-            # タイトル入力フィールドを探す
+            # タイトル入力フィールドを探す（現在のnoteエディタUIに対応）
             title_selectors = [
+                'textarea',  # 現在のnoteエディタのタイトルフィールド
+                'textarea[placeholder*="タイトル"]',
                 'input[placeholder="タイトル"]',
-                'textarea[placeholder="タイトル"]',
+                'input[placeholder*="タイトル"]',
                 '[data-testid="title-input"]',
                 'input[name="title"]',
                 '.title-input',
-                'h1[contenteditable="true"]',
-                '[placeholder*="タイトル"]'
+                'h1[contenteditable="true"]'
             ]
             
             title_filled = False
@@ -214,16 +215,17 @@ class NotePoster:
             
             await asyncio.sleep(2)
             
-            # 本文入力フィールドを探す
+            # 本文入力フィールドを探す（現在のnoteエディタUIに対応）
             content_selectors = [
+                'div',  # 現在のnoteエディタの本文フィールド（青い枠のdiv）
+                'div[contenteditable="true"]',
+                '[contenteditable="true"]',
                 '[data-testid="editor"]',
                 '.editor-content',
-                '[contenteditable="true"]',
                 'textarea[placeholder="本文を入力"]',
                 'textarea[placeholder*="本文"]',
                 '.note-editor',
-                '[role="textbox"]',
-                'div[contenteditable="true"]'
+                '[role="textbox"]'
             ]
             
             content_filled = False
@@ -342,8 +344,9 @@ class NotePoster:
         try:
             print("記事を公開中...")
             
-            # 公開ボタンを探してクリック
+            # 公開ボタンを探してクリック（現在のnoteエディタUIに対応）
             publish_selectors = [
+                'button:has-text("公開に進む")',  # 現在のnoteエディタの公開ボタン
                 'button:has-text("公開する")',
                 'button:has-text("投稿する")',
                 'button:has-text("公開")',
