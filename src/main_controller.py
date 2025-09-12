@@ -190,10 +190,14 @@ class MainController:
                 return False
             
             # 記事投稿
+            # カテゴリに応じたサムネイル画像を選択
+            thumbnail_path = self.select_thumbnail_image(article_data['category'])
+            
             success = await self.note_poster.post_article(
                 article_data['title'],
                 article_data['content'],
-                article_data['tags']
+                article_data['tags'],
+                thumbnail_path
             )
             
             await self.note_poster.close_browser()
@@ -219,6 +223,29 @@ class MainController:
             self.logger.error(f"記事生成・投稿プロセスでエラー: {e}")
             self.daily_stats['errors'].append(str(e))
             return False
+    
+    def select_thumbnail_image(self, category: str) -> Optional[str]:
+        """カテゴリに応じたサムネイル画像を選択"""
+        try:
+            # カテゴリに応じた画像マッピング
+            image_mapping = {
+                "占い": "/home/ubuntu/upload/search_images/r2iQgMlsEGfl.png",  # タロット占い画像
+                "フィットネス": "/home/ubuntu/upload/search_images/S9YjUASL7L7t.jpg",  # 筋トレ画像
+                "書籍": "/home/ubuntu/upload/search_images/3zTJwMaKDZ1P.png"  # 読書記録画像
+            }
+            
+            thumbnail_path = image_mapping.get(category)
+            
+            if thumbnail_path and os.path.exists(thumbnail_path):
+                self.logger.info(f"サムネイル画像選択: {thumbnail_path}")
+                return thumbnail_path
+            else:
+                self.logger.warning(f"カテゴリ {category} のサムネイル画像が見つかりません")
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"サムネイル画像選択エラー: {e}")
+            return None
     
     def save_article_data(self, article_data: Dict, note_url: str):
         """記事データを保存"""

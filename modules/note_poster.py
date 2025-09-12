@@ -79,92 +79,25 @@ class NotePoster:
             
             # メールアドレス/ユーザー名入力
             try:
-                # 複数のセレクタを試行
-                selectors = [
-                    'input[placeholder="mail@example.com or note ID"]',
-                    'input[type="email"]',
-                    'input[name="email"]',
-                    'input[placeholder*="mail"]',
-                    'input[placeholder*="メール"]'
-                ]
-                
-                input_filled = False
-                for selector in selectors:
-                    try:
-                        await self.page.wait_for_selector(selector, timeout=5000)
-                        await self.page.fill(selector, self.username)
-                        logger.info(f"ユーザー名入力成功: {selector}")
-                        input_filled = True
-                        break
-                    except:
-                        continue
-                
-                if not input_filled:
-                    logger.error("ユーザー名入力フィールドが見つかりません")
-                    return False
-                    
+                await self.page.fill('input[type="email"], input[placeholder*="mail"], input[placeholder*="ID"]', self.username)
+                logger.info("ユーザー名入力成功")
             except Exception as e:
                 logger.error(f"ユーザー名入力に失敗: {e}")
                 return False
             
             # パスワード入力
             try:
-                # 複数のセレクタを試行
-                selectors = [
-                    'input[aria-label="パスワード"]',
-                    'input[type="password"]',
-                    'input[name="password"]',
-                    'input[placeholder*="パスワード"]',
-                    'input[placeholder*="password"]'
-                ]
-                
-                input_filled = False
-                for selector in selectors:
-                    try:
-                        await self.page.wait_for_selector(selector, timeout=5000)
-                        await self.page.fill(selector, self.password)
-                        logger.info(f"パスワード入力成功: {selector}")
-                        input_filled = True
-                        break
-                    except:
-                        continue
-                
-                if not input_filled:
-                    logger.error("パスワード入力フィールドが見つかりません")
-                    return False
-                    
+                await self.page.fill('input[type="password"]', self.password)
+                logger.info("パスワード入力成功")
             except Exception as e:
                 logger.error(f"パスワード入力に失敗: {e}")
                 return False
             
             # ログインボタンクリック
             try:
-                # 複数のセレクタを試行
-                selectors = [
-                    'button[type="submit"]',
-                    'button:has-text("ログイン")',
-                    'button:has-text("Login")',
-                    'input[type="submit"]',
-                    'form button'
-                ]
-                
-                button_clicked = False
-                for selector in selectors:
-                    try:
-                        await self.page.wait_for_selector(selector, timeout=5000)
-                        await self.page.click(selector)
-                        logger.info(f"ログインボタンクリック成功: {selector}")
-                        button_clicked = True
-                        break
-                    except:
-                        continue
-                
-                if not button_clicked:
-                    logger.error("ログインボタンが見つかりません")
-                    return False
-                
+                await self.page.click('button[type="submit"], button:has-text("ログイン")')
                 await self.page.wait_for_load_state('networkidle')
-                
+                logger.info("ログインボタンクリック成功")
             except Exception as e:
                 logger.error(f"ログインボタンクリックに失敗: {e}")
                 return False
@@ -196,7 +129,7 @@ class NotePoster:
             logger.error(f"ログインエラー: {e}")
             return False
     
-    async def post_article(self, title, content, tags):
+    async def post_article(self, title, content, tags, thumbnail_path=None):
         """記事を投稿する"""
         try:
             logger.info("記事投稿を開始")
@@ -204,6 +137,10 @@ class NotePoster:
             # 新規記事作成ページに移動
             await self.page.goto("https://note.com/new")
             await self.page.wait_for_load_state("networkidle")
+            
+            # サムネイル画像を設定（オプション）
+            if thumbnail_path:
+                await self.set_thumbnail_image(thumbnail_path)
             
             # タイトル入力
             logger.info("タイトルを入力中...")
@@ -292,6 +229,52 @@ class NotePoster:
             
         except Exception as e:
             logger.error(f"記事投稿中にエラーが発生: {e}")
+            return False
+    
+    async def set_thumbnail_image(self, image_path: str) -> bool:
+        """サムネイル画像を設定"""
+        try:
+            logger.info("サムネイル画像を設定中...")
+            
+            # 画像アップロードボタンを探す
+            try:
+                # 複数のセレクタを試行
+                selectors = [
+                    'input[type="file"]',
+                    'button[aria-label="画像を追加"]',
+                    'button:has-text("画像")',
+                    '[data-testid="image-upload"]'
+                ]
+                
+                for selector in selectors:
+                    try:
+                        if selector == 'input[type="file"]':
+                            # ファイル入力要素に直接ファイルを設定
+                            await self.page.set_input_files(selector, image_path)
+                            logger.info("サムネイル画像設定成功")
+                            await asyncio.sleep(2)
+                            return True
+                        else:
+                            # ボタンをクリックしてファイル選択ダイアログを開く
+                            await self.page.click(selector)
+                            await asyncio.sleep(1)
+                            # ファイル入力要素が表示されたら設定
+                            await self.page.set_input_files('input[type="file"]', image_path)
+                            logger.info("サムネイル画像設定成功")
+                            await asyncio.sleep(2)
+                            return True
+                    except:
+                        continue
+                
+                logger.warning("画像アップロードボタンが見つかりませんでした")
+                return False
+                
+            except Exception as e:
+                logger.error(f"サムネイル画像設定に失敗: {e}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"サムネイル画像設定エラー: {e}")
             return False
     
     async def add_tags(self, tags: List[str]) -> bool:

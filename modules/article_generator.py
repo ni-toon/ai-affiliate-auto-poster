@@ -218,18 +218,35 @@ class ArticleGenerator:
         # アフィリエイト免責事項を冒頭に追加
         disclaimer = "※本記事にはアフィリエイトリンクを含みます\n\n"
         
-        # 商品名の後にリンクを挿入（noteに適した形式）
-        modified_content = content
-        for product in products:
-            product_name = product['name']
-            amazon_link = product['amazon_link']
-            
-            # 商品名の後にプレーンテキストリンクを追加（最初の出現のみ）
-            pattern = f"({re.escape(product_name)})"
-            replacement = f"\\1\n\n▼ Amazon詳細ページ\n{amazon_link}\n"
-            modified_content = re.sub(pattern, replacement, modified_content, count=1)
+        # 記事の構造を解析
+        sections = content.split('\n\n')
+        modified_sections = []
         
-        return disclaimer + modified_content
+        for i, section in enumerate(sections):
+            modified_sections.append(section)
+            
+            # メリット部分の後にアフィリエイトリンクを挿入
+            if '## メリット' in section or 'メリット' in section:
+                if products:
+                    product = products[0]
+                    link_section = f"▼ {product['name']} - Amazon詳細ページ\n{product['amazon_link']}"
+                    modified_sections.append(link_section)
+            
+            # まとめ部分の前に追加のアフィリエイトリンクを挿入
+            elif '## まとめ' in section or 'まとめ' in section:
+                if len(products) > 1:
+                    for product in products[1:]:
+                        link_section = f"▼ {product['name']} - Amazon詳細ページ\n{product['amazon_link']}"
+                        modified_sections.insert(-1, link_section)
+        
+        # もしメリットやまとめが見つからない場合は、記事の最後に追加
+        has_links = any('Amazon詳細ページ' in section for section in modified_sections)
+        if not has_links and products:
+            for product in products:
+                link_section = f"▼ {product['name']} - Amazon詳細ページ\n{product['amazon_link']}"
+                modified_sections.append(link_section)
+        
+        return disclaimer + '\n\n'.join(modified_sections)
     
     def generate_note_tags(self, category: str, article_type: str) -> List[str]:
         """note用のタグを生成"""
