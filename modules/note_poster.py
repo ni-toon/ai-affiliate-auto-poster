@@ -10,19 +10,29 @@ from playwright.async_api import async_playwright, Page, Browser
 import json
 import os
 from datetime import datetime
+from .photo_gallery_manager import PhotoGalleryManager
 
 # ログ設定
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class NotePoster:
-    def __init__(self, username: str, password: str, headless: bool = True):
+    def __init__(self, username: str, password: str, headless: bool = True, enable_photo_gallery: bool = True):
         self.username = username
         self.password = password
         self.headless = headless
         self.browser = None
         self.page = None
         self.is_logged_in = False
+        
+        # 画像ギャラリー機能を初期化
+        self.enable_photo_gallery = enable_photo_gallery
+        if self.enable_photo_gallery:
+            self.photo_manager = PhotoGalleryManager()
+            logger.info("みんなのフォトギャラリー機能を有効化しました")
+        else:
+            self.photo_manager = None
+            logger.info("みんなのフォトギャラリー機能は無効です")
     
     async def start_browser(self):
         """ブラウザを起動"""
@@ -129,14 +139,26 @@ class NotePoster:
             logger.error(f"ログインエラー: {e}")
             return False
     
-    async def post_article(self, title, content, tags, thumbnail_path=None, products=None):
-        """記事を投稿する（OGPリンクカード対応版）"""
+    async def post_article(self, title, content, tags, thumbnail_path=None, products=None, article_category=None):
+        """記事を投稿する（OGPリンクカード対応版 + 画像自動追加）"""
         try:
             logger.info("記事投稿を開始")
             
             # 新規記事作成ページに移動
             await self.page.goto("https://note.com/new")
             await self.page.wait_for_load_state("networkidle")
+            
+            # みんなのフォトギャラリーから画像を追加
+            if self.enable_photo_gallery and self.photo_manager and article_category:
+                logger.info("みんなのフォトギャラリーから画像を追加中...")
+                try:
+                    photo_added = await self.photo_manager.add_photo_to_article(self.page, article_category)
+                    if photo_added:
+                        logger.info("画像が正常に追加されました")
+                    else:
+                        logger.warning("画像の追加に失敗しましたが、記事投稿を続行します")
+                except Exception as e:
+                    logger.warning(f"画像追加でエラーが発生しましたが、記事投稿を続行します: {e}")
             
             # サムネイル画像を設定（オプション）
             if thumbnail_path:

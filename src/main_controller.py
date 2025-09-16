@@ -39,7 +39,8 @@ class MainController:
         self.note_poster = NotePoster(
             username=self.config['note']['username'],
             password=self.config['note']['password'],
-            headless=self.config.get('browser', {}).get('headless', True)
+            headless=self.config.get('browser', {}).get('headless', True),
+            enable_photo_gallery=True  # みんなのフォトギャラリー機能を有効化
         )
         
         self.image_generator = ImageGeneratorWrapper()
@@ -205,7 +206,8 @@ class MainController:
                 article_data['content'],
                 article_data['tags'],
                 thumbnail_path,
-                products  # アフィリエイトリンク変換用
+                products,  # アフィリエイトリンク変換用
+                article_data['category']  # みんなのフォトギャラリー用カテゴリ
             )
             
             await self.note_poster.close_browser()
