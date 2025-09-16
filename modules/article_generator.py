@@ -218,34 +218,48 @@ class ArticleGenerator:
         # アフィリエイト免責事項を冒頭に追加
         disclaimer = "※本記事にはアフィリエイトリンクを含みます\n\n"
         
+        if not products:
+            return disclaimer + content
+        
+        main_product = products[0]
+        product_name = main_product['name']
+        
         # 記事の構造を解析
         sections = content.split('\n\n')
         modified_sections = []
         
+        link_inserted = False
+        
         for i, section in enumerate(sections):
+            # 商品名が既に含まれている場合は、それをプレースホルダーに置換
+            if product_name in section and not link_inserted:
+                # 最初に商品名が出現した箇所をリンク化対象として設定
+                section = section.replace(product_name, f"[LINK:{product_name}]", 1)
+                link_inserted = True
+            
             modified_sections.append(section)
             
-            # メリット部分の後にアフィリエイトリンクプレースホルダーを挿入
-            if '## メリット' in section or 'メリット' in section:
-                if products:
-                    product = products[0]
-                    # プレースホルダーを使用（note投稿時にPlaywrightで実際のリンクに変換）
-                    link_section = f"▼ {product['name']} - [Amazon商品リンク_{product['name']}]"
-                    modified_sections.append(link_section)
-            
-            # まとめ部分の前に追加のアフィリエイトリンクプレースホルダーを挿入
-            elif '## まとめ' in section or 'まとめ' in section:
-                if len(products) > 1:
-                    for j, product in enumerate(products[1:], 1):
-                        link_section = f"▼ {product['name']} - [Amazon商品リンク_{product['name']}]"
-                        modified_sections.insert(-1, link_section)
-        
-        # もしメリットやまとめが見つからない場合は、記事の最後に追加
-        has_links = any('[Amazon商品リンク_' in section for section in modified_sections)
-        if not has_links and products:
-            for product in products:
-                link_section = f"▼ {product['name']} - [Amazon商品リンク_{product['name']}]"
+            # メリット部分の後に自然な形でアフィリエイトリンクを挿入
+            if ('## メリット' in section or 'メリット' in section) and not link_inserted:
+                # 自然な文章でリンクを挿入
+                link_section = f"[LINK:{product_name}]は、多くの読者から高い評価を得ている商品です。"
                 modified_sections.append(link_section)
+                link_inserted = True
+        
+        # もしまだリンクが挿入されていない場合は、記事の最後に自然な形で追加
+        if not link_inserted:
+            link_section = f"今回ご紹介した[LINK:{product_name}]について、詳細は以下からご確認いただけます。"
+            modified_sections.append(link_section)
+        
+        # 追加の商品がある場合は、まとめ部分に挿入
+        if len(products) > 1:
+            for j, product in enumerate(products[1:], 1):
+                additional_link = f"また、[LINK:{product['name']}]も併せてご検討ください。"
+                # まとめ部分の前に挿入
+                if len(modified_sections) > 2:
+                    modified_sections.insert(-1, additional_link)
+                else:
+                    modified_sections.append(additional_link)
         
         return disclaimer + '\n\n'.join(modified_sections)
     

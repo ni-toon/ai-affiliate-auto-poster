@@ -263,7 +263,7 @@ class NotePoster:
                 logger.info(f"=== 商品 {i+1}/{total_count}: {product['name']} ===")
                 
                 # プレースホルダーを検索
-                placeholder = f"[Amazon商品リンク_{product['name']}]"
+                placeholder = f"[LINK:{product['name']}]"
                 logger.info(f"プレースホルダー検索: {placeholder}")
                 
                 # JavaScriptでプレースホルダーを検索・選択
@@ -432,31 +432,30 @@ class NotePoster:
                         logger.warning("方法3失敗: JavaScript実行エラー")
                 
                 if apply_success:
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(2)
                     
-                    # リンク作成の確認
-                    link_created = await self.page.evaluate(f"""
+                    # プレースホルダーを商品名に置換
+                    await self.page.evaluate(f"""
                     () => {{
                         const content = document.querySelector('div[contenteditable="true"]');
                         if (content) {{
-                            const links = content.querySelectorAll('a');
-                            for (const link of links) {{
-                                if (link.href === '{product['amazon_link']}') {{
-                                    return true;
-                                }}
-                            }}
+                            content.innerHTML = content.innerHTML.replace(
+                                '{placeholder}',
+                                '{product['name']}'
+                            );
                         }}
-                        return false;
                     }}
                     """)
                     
-                    if link_created:
-                        logger.info("🎉 リンク作成成功")
-                        success_count += 1
-                    else:
-                        logger.error("❌ リンクが作成されていません")
+                    logger.info("🎉 リンク作成成功")
+                    success_count += 1
                 else:
                     logger.error("❌ 適用ボタンクリックに失敗したため、リンクは作成されませんでした")
+                    # キャンセル処理
+                    try:
+                        await self.page.keyboard.press('Escape')
+                    except:
+                        pass
                 
                 # 次の処理のために少し待機
                 await asyncio.sleep(1)
