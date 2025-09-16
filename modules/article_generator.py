@@ -5,13 +5,24 @@ OpenAI APIを使用してアフィリエイト記事を自動生成する機能�
 
 import openai
 import random
-import json
-from typing import Dict, List, Optional
-from datetime import datetime
+import logging
 import re
+from datetime import datetime
+from typing import Dict, List, Optional
+from .article_history_manager import ArticleHistoryManager
+from .similarity_analyzer import SimilarityAnalyzer
+
+logger = logging.getLogger(__name__)
 
 class ArticleGenerator:
-    def __init__(self, openai_api_key: str):
+    def __init__(self, openai_api_key: str, enable_duplicate_check: bool = True):
+        """
+        記事生成器を初期化
+        
+        Args:
+            openai_api_key: OpenAI APIキー
+            enable_duplicate_check: 重複チェック機能を有効にするか
+        """
         # OpenAI APIキーの検証
         if not openai_api_key or openai_api_key == "your-openai-api-key-here":
             raise ValueError("有効なOpenAI APIキーが設定されていません。config.jsonを確認してください。")
@@ -20,8 +31,25 @@ class ArticleGenerator:
         try:
             self.client = openai.OpenAI(api_key=openai_api_key)
         except Exception as e:
-            raise ValueError(f"OpenAIクライアントの初期化に失敗しました: {e}")
-            
+            logger.error(f"OpenAIクライアントの初期化に失敗: {e}")
+            raise
+        
+        # 重複チェック機能を初期化
+        self.enable_duplicate_check = enable_duplicate_check
+        if self.enable_duplicate_check:
+            try:
+                self.history_manager = ArticleHistoryManager()
+                self.similarity_analyzer = SimilarityAnalyzer()
+                logger.info("重複チェック機能を有効化しました")
+            except Exception as e:
+                logger.warning(f"重複チェック機能の初期化に失敗: {e}")
+                self.enable_duplicate_check = False
+                self.history_manager = None
+                self.similarity_analyzer = None
+        else:
+            self.history_manager = None
+            self.similarity_analyzer = None
+            logger.info("重複チェック機能は無効です")
         self.article_types = ["レビュー", "ハウツー", "商品紹介"]
         self.hashtags_pool = {
             "占い": ["#占い", "#タロット", "#スピリチュアル", "#開運", "#パワーストーン", "#風水"],
@@ -294,7 +322,7 @@ class ArticleGenerator:
         
         return patterns
     
-    def generate_complete_article(self, products: List[Dict], article_type: str = None) -> Dict:
+    def generate_complete_article(self, products: List[Dict], article_type: str = None, max_retries: int = 3) -> Dict:
         """完全な記事を生成（タイトル、本文、タグ、X投稿文）"""
         if not article_type:
             article_type = random.choice(self.article_types)
@@ -302,31 +330,70 @@ class ArticleGenerator:
         main_product = products[0]
         category = main_product['selected_category']
         
-        # タイトル生成
-        title = self.generate_seo_title(main_product, article_type)
+        # 重複チェック機能が有効な場合、複数回試行
+        for attempt in range(max_retries):
+            logger.info(f"記事生成試行 {attempt + 1}/{max_retries}")
+            
+            # タイトル生成
+            title = self.generate_seo_title(main_product, article_type)
+            
+            # 記事本文生成
+            content = self.generate_article_content(products, article_type, title)
+            
+            # 重複チェック
+            if self.enable_duplicate_check and self.history_manager and self.similarity_analyzer:
+                logger.info("記事の重複チェックを実行中...")
+                
+                # 類似度チェック
+                has_similar, similar_articles = self.history_manager.check_similarity(
+                    content, similarity_threshold=0.6
+                )
+                
+                if has_similar:
+                    logger.warning(f"類似記事を{len(similar_articles)}件発見")
+                    for similar in similar_articles[:3]:
+                        logger.warning(f"  - {similar['title']} (類似度: {similar['similarity']:.2f})")
+                    
+                    if attempt < max_retries - 1:
+                        logger.info("記事を再生成します...")
+                        continue
+                    else:
+                        logger.warning("最大試行回数に達しました。類似記事が存在しますが、この記事を使用します。")
+                else:
+                    logger.info("類似記事は見つかりませんでした。記事生成を続行します。")
+            
+            # アフィリエイトリンク挿入
+            final_content = self.insert_affiliate_links(content, products)
+            
+            # タグ生成
+            tags = self.generate_note_tags(category, article_type)
+            
+            # X投稿パターン生成
+            x_patterns = self.generate_x_post_patterns(title, "NOTE_URL_PLACEHOLDER", category)
+            
+            article_data = {
+                "title": title,
+                "content": final_content,
+                "tags": tags,
+                "x_post_patterns": x_patterns,
+                "article_type": article_type,
+                "category": category,
+                "products": products,
+                "generated_at": datetime.now().isoformat()
+            }
+            
+            # 記事を履歴に追加
+            if self.enable_duplicate_check and self.history_manager:
+                try:
+                    article_id = self.history_manager.add_article(article_data)
+                    logger.info(f"記事を履歴に追加しました (ID: {article_id})")
+                except Exception as e:
+                    logger.warning(f"記事履歴への追加に失敗: {e}")
+            
+            return article_data
         
-        # 記事本文生成
-        content = self.generate_article_content(products, article_type, title)
-        
-        # アフィリエイトリンク挿入
-        final_content = self.insert_affiliate_links(content, products)
-        
-        # タグ生成
-        tags = self.generate_note_tags(category, article_type)
-        
-        # X投稿パターン生成
-        x_patterns = self.generate_x_post_patterns(title, "NOTE_URL_PLACEHOLDER", category)
-        
-        return {
-            "title": title,
-            "content": final_content,
-            "tags": tags,
-            "x_post_patterns": x_patterns,
-            "article_type": article_type,
-            "category": category,
-            "products": products,
-            "generated_at": datetime.now().isoformat()
-        }
+        # ここに到達することはないが、安全のため
+        raise RuntimeError("記事生成に失敗しました")
 
 # 使用例
 if __name__ == "__main__":
