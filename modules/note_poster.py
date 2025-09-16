@@ -160,43 +160,45 @@ class NotePoster:
                 logger.error(f"タイトル入力に失敗: {e}")
                 return False
             
-            # 本文入力（OGPリンクカードが自動生成される）
+            # 本文入力（OGPリンクカード対応版）
             logger.info("本文を入力中...")
             try:
-                # HTMLエスケープ処理
-                escaped_content = content.replace('\\', '\\\\').replace('`', '\\`').replace('${', '\\${')
+                # 本文エリアを取得してフォーカス
+                await self.page.wait_for_selector('div[contenteditable="true"]', timeout=10000)
+                content_area = await self.page.query_selector('div[contenteditable="true"]')
+                await content_area.click()
                 
-                js_code = f"""
-                // 本文エリアを取得
-                const contentDiv = document.querySelector('div[contenteditable="true"]');
+                # 本文を行ごとに処理してカードリンクを生成
+                lines = content.split('\n')
                 
-                if (contentDiv) {{
-                    contentDiv.innerHTML = `{escaped_content}`.replace(/\\n/g, '<br>');
-                    // フォーカスを当てて変更を確定
-                    contentDiv.focus();
-                    contentDiv.blur();
-                    console.log('本文入力完了');
-                    true;
-                }} else {{
-                    console.log('本文エリアが見つかりません');
-                    false;
-                }}
-                """
+                for i, line in enumerate(lines):
+                    if line.strip():  # 空行でない場合
+                        # 行を入力
+                        await self.page.keyboard.type(line)
+                        
+                        # URLが含まれている場合は、Enterを押してカードリンクを生成
+                        if 'amazon.co.jp' in line or 'http' in line:
+                            logger.info(f"URL検出: {line[:50]}...")
+                            await self.page.keyboard.press('Enter')
+                            # カードリンク生成を待機
+                            await asyncio.sleep(2)
+                            logger.info("カードリンク生成待機完了")
+                        else:
+                            # 通常の行の場合は改行のみ
+                            await self.page.keyboard.press('Enter')
+                    else:
+                        # 空行の場合は改行のみ
+                        await self.page.keyboard.press('Enter')
                 
-                result = await self.page.evaluate(js_code)
-                if result:
-                    logger.info("本文入力成功")
-                else:
-                    logger.error("本文エリアが見つかりません")
-                    return False
+                logger.info("本文入力成功（カードリンク対応版）")
                     
             except Exception as e:
                 logger.error(f"本文入力に失敗: {e}")
                 return False
             
-            # OGPリンクカードの自動生成を待機
-            logger.info("OGPリンクカードの生成を待機中...")
-            await self.page.wait_for_timeout(3000)
+            # OGPリンクカードの最終生成を待機
+            logger.info("全てのOGPリンクカードの生成を待機中...")
+            await self.page.wait_for_timeout(5000)
             
             # 少し待機してから公開に進む
             await self.page.wait_for_timeout(2000)
