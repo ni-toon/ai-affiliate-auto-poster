@@ -39,7 +39,7 @@ class ArticleGenerator:
         
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4.1-mini",
                 messages=[
                     {"role": "system", "content": "あなたはSEOに精通したコピーライターです。検索エンジンで上位表示されやすく、クリックされやすいタイトルを生成してください。タイトルは30文字以内で、具体的で魅力的にしてください。"},
                     {"role": "user", "content": prompts[article_type]}
@@ -159,7 +159,7 @@ class ArticleGenerator:
         
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-4.1-mini",
                 messages=[
                     {"role": "system", "content": """あなたは日本語が母語の経験豊富なアフィリエイトライターです。以下の要件を厳守してください：
 
@@ -214,7 +214,7 @@ class ArticleGenerator:
         return fallback_content
     
     def insert_affiliate_links(self, content: str, products: List[Dict]) -> str:
-        """記事中にアフィリエイトリンクプレースホルダーを自然に挿入"""
+        """記事中にアフィリエイトリンクをOGPリンクカード形式で自然に挿入"""
         # アフィリエイト免責事項を冒頭に追加
         disclaimer = "※本記事にはアフィリエイトリンクを含みます\n\n"
         
@@ -223,6 +223,7 @@ class ArticleGenerator:
         
         main_product = products[0]
         product_name = main_product['name']
+        product_url = main_product.get('url', '')
         
         # 記事の構造を解析
         sections = content.split('\n\n')
@@ -231,35 +232,37 @@ class ArticleGenerator:
         link_inserted = False
         
         for i, section in enumerate(sections):
-            # 商品名が既に含まれている場合は、それをプレースホルダーに置換
-            if product_name in section and not link_inserted:
-                # 最初に商品名が出現した箇所をリンク化対象として設定
-                section = section.replace(product_name, f"[LINK:{product_name}]", 1)
-                link_inserted = True
-            
             modified_sections.append(section)
             
-            # メリット部分の後に自然な形でアフィリエイトリンクを挿入
-            if ('## メリット' in section or 'メリット' in section) and not link_inserted:
-                # 自然な文章でリンクを挿入
-                link_section = f"[LINK:{product_name}]は、多くの読者から高い評価を得ている商品です。"
-                modified_sections.append(link_section)
+            # メリット部分の後に自然な形でアフィリエイトリンクをOGPカード形式で挿入
+            if ('## メリット' in section or 'メリット' in section) and not link_inserted and product_url:
+                # 商品紹介文を追加
+                intro_text = f"{product_name}は、多くの読者から高い評価を得ている商品です。詳細は以下からご確認いただけます。"
+                modified_sections.append(intro_text)
+                # OGPリンクカード生成のため、URLを単独行で配置
+                modified_sections.append(product_url)
                 link_inserted = True
         
         # もしまだリンクが挿入されていない場合は、記事の最後に自然な形で追加
-        if not link_inserted:
-            link_section = f"今回ご紹介した[LINK:{product_name}]について、詳細は以下からご確認いただけます。"
-            modified_sections.append(link_section)
+        if not link_inserted and product_url:
+            intro_text = f"今回ご紹介した{product_name}について、詳細は以下からご確認いただけます。"
+            modified_sections.append(intro_text)
+            # OGPリンクカード生成のため、URLを単独行で配置
+            modified_sections.append(product_url)
         
         # 追加の商品がある場合は、まとめ部分に挿入
         if len(products) > 1:
             for j, product in enumerate(products[1:], 1):
-                additional_link = f"また、[LINK:{product['name']}]も併せてご検討ください。"
-                # まとめ部分の前に挿入
-                if len(modified_sections) > 2:
-                    modified_sections.insert(-1, additional_link)
-                else:
-                    modified_sections.append(additional_link)
+                additional_product_url = product.get('url', '')
+                if additional_product_url:
+                    additional_intro = f"また、{product['name']}も併せてご検討ください。"
+                    # まとめ部分の前に挿入
+                    if len(modified_sections) > 2:
+                        modified_sections.insert(-1, additional_intro)
+                        modified_sections.insert(-1, additional_product_url)
+                    else:
+                        modified_sections.append(additional_intro)
+                        modified_sections.append(additional_product_url)
         
         return disclaimer + '\n\n'.join(modified_sections)
     

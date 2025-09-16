@@ -130,7 +130,7 @@ class NotePoster:
             return False
     
     async def post_article(self, title, content, tags, thumbnail_path=None, products=None):
-        """記事を投稿する"""
+        """記事を投稿する（OGPリンクカード対応版）"""
         try:
             logger.info("記事投稿を開始")
             
@@ -142,17 +142,25 @@ class NotePoster:
             if thumbnail_path:
                 await self.set_thumbnail_image(thumbnail_path)
             
-            # タイトル入力
+            # タイトル入力（URLではなく記事タイトルを使用）
             logger.info("タイトルを入力中...")
             try:
                 await self.page.wait_for_selector('textarea', timeout=10000)
+                # タイトルがURLの場合は、商品名から適切なタイトルを生成
+                if title.startswith('http'):
+                    if products and len(products) > 0:
+                        title = f"{products[0]['name']}のレビューと使用感"
+                    else:
+                        title = "おすすめ商品のご紹介"
+                    logger.info(f"タイトルを修正: {title}")
+                
                 await self.page.fill('textarea', title)
                 logger.info(f"タイトル入力成功: {title}")
             except Exception as e:
                 logger.error(f"タイトル入力に失敗: {e}")
                 return False
             
-            # 本文入力（アフィリエイトリンクプレースホルダーを含む）
+            # 本文入力（OGPリンクカードが自動生成される）
             logger.info("本文を入力中...")
             try:
                 # HTMLエスケープ処理
@@ -186,9 +194,9 @@ class NotePoster:
                 logger.error(f"本文入力に失敗: {e}")
                 return False
             
-            # アフィリエイトリンクプレースホルダーを実際のリンクに変換
-            if products:
-                await self.convert_affiliate_placeholders(products)
+            # OGPリンクカードの自動生成を待機
+            logger.info("OGPリンクカードの生成を待機中...")
+            await self.page.wait_for_timeout(3000)
             
             # 少し待機してから公開に進む
             await self.page.wait_for_timeout(2000)
@@ -235,7 +243,82 @@ class NotePoster:
             logger.error(f"記事投稿中にエラーが発生: {e}")
             return False
     
-    async def convert_affiliate_placeholders(self, products: List[Dict]) -> bool:
+    # async def convert_affiliate_placeholders(self, products: List[Dict]) -> bool:
+    #     """
+    #     アフィリエイトリンクプレースホルダーを実際のリンクに変換
+    #     手動テストで100%成功した方法を実装
+    #     ※ OGPリンクカード方式に変更したため、このメソッドは不要
+    #     """
+    #     logger.info("=== 旧リンク変換処理（無効化済み） ===")
+    #     return True
+    
+    async def verify_ogp_link_cards(self, products: List[Dict]) -> bool:
+        """
+        OGPリンクカードが正しく生成されているかを確認
+        """
+        logger.info("=== OGPリンクカード確認開始 ===")
+        
+        if not products:
+            logger.info("確認対象の商品がありません")
+            return True
+        
+        try:
+            # 少し待機してOGPリンクカードの生成を待つ
+            await self.page.wait_for_timeout(5000)
+            
+            # 本文エリア内のリンクカードを確認
+            link_cards_found = 0
+            
+            for i, product in enumerate(products):
+                product_url = product.get('url', '')
+                if not product_url:
+                    continue
+                
+                logger.info(f"商品 {i+1}: {product['name']} のOGPリンクカードを確認中...")
+                
+                # OGPリンクカードの存在確認（複数の方法で確認）
+                card_found = await self.page.evaluate(f"""
+                    // 方法1: URLを含むリンクカードを検索
+                    const linkCards = document.querySelectorAll('a[href*="{product_url.replace('https://', '').split('/')[0]}"]');
+                    if (linkCards.length > 0) {{
+                        console.log('OGPリンクカード発見 (方法1): ' + linkCards.length + '個');
+                        return true;
+                    }}
+                    
+                    // 方法2: 本文内のURLテキストを確認
+                    const contentDiv = document.querySelector('div[contenteditable="true"]');
+                    if (contentDiv && contentDiv.innerHTML.includes('{product_url}')) {{
+                        console.log('URL確認 (方法2): URLが本文に存在');
+                        return true;
+                    }}
+                    
+                    // 方法3: iframe要素（埋め込みカード）を確認
+                    const iframes = document.querySelectorAll('iframe');
+                    for (const iframe of iframes) {{
+                        if (iframe.src && iframe.src.includes('amazon')) {{
+                            console.log('埋め込みカード発見 (方法3)');
+                            return true;
+                        }}
+                    }}
+                    
+                    console.log('OGPリンクカードが見つかりませんでした');
+                    return false;
+                """)
+                
+                if card_found:
+                    logger.info(f"✅ {product['name']} のOGPリンクカードを確認")
+                    link_cards_found += 1
+                else:
+                    logger.warning(f"❌ {product['name']} のOGPリンクカードが見つかりません")
+            
+            success_rate = link_cards_found / len(products) if products else 0
+            logger.info(f"OGPリンクカード確認結果: {link_cards_found}/{len(products)} ({success_rate:.1%})")
+            
+            return link_cards_found > 0  # 少なくとも1つのリンクカードが確認できれば成功
+            
+        except Exception as e:
+            logger.error(f"OGPリンクカード確認中にエラー: {e}")
+            return False
         """
         アフィリエイトリンクプレースホルダーを実際のリンクに変換
         手動テストで100%成功した方法を実装
