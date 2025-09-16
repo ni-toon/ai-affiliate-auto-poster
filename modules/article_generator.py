@@ -223,7 +223,7 @@ class ArticleGenerator:
         
         main_product = products[0]
         product_name = main_product['name']
-        product_url = main_product.get('url', '')
+        product_url = main_product.get('url', main_product.get('amazon_link', ''))
         
         # 記事の構造を解析
         sections = content.split('\n\n')
@@ -253,7 +253,7 @@ class ArticleGenerator:
         # 追加の商品がある場合は、まとめ部分に挿入
         if len(products) > 1:
             for j, product in enumerate(products[1:], 1):
-                additional_product_url = product.get('url', '')
+                additional_product_url = product.get('url', product.get('amazon_link', ''))
                 if additional_product_url:
                     additional_intro = f"また、{product['name']}も併せてご検討ください。"
                     # まとめ部分の前に挿入
