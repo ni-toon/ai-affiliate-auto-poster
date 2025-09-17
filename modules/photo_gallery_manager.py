@@ -321,17 +321,61 @@ class PhotoGalleryManager:
             
             logger.info(insert_result['message'])
             
-            # 画像サイズ調整ダイアログの表示待機
+            # 画像サイズ調整ダイアログの表示待機と保存ボタンクリック
             try:
+                # 保存ボタンの表示待機
                 await page.wait_for_selector('button:has-text("保存")', timeout=10000)
                 logger.info("画像サイズ調整ダイアログが表示されました")
                 
                 # 少し待機してから保存
                 await asyncio.sleep(1)
                 
-                # 保存ボタンをクリック
-                await page.click('button:has-text("保存")')
-                logger.info("画像サイズ調整を保存しました")
+                # JavaScriptで保存ボタンを確実にクリック
+                save_result = await page.evaluate("""
+                    () => {
+                        // 全てのボタンを検索
+                        const buttons = document.querySelectorAll('button');
+                        let saveButton = null;
+                        
+                        // テキスト内容で「保存」ボタンを探す
+                        for (let btn of buttons) {
+                            const text = btn.textContent || btn.innerText || '';
+                            if (text.includes('保存') && btn.offsetParent !== null) {
+                                saveButton = btn;
+                                break;
+                            }
+                        }
+                        
+                        if (saveButton) {
+                            // ボタンの詳細情報をログ出力
+                            const style = window.getComputedStyle(saveButton);
+                            console.log('保存ボタン詳細:', {
+                                text: saveButton.textContent,
+                                backgroundColor: style.backgroundColor,
+                                color: style.color,
+                                visible: saveButton.offsetParent !== null,
+                                rect: saveButton.getBoundingClientRect()
+                            });
+                            
+                            saveButton.click();
+                            return { success: true, message: '保存ボタンをクリックしました' };
+                        } else {
+                            return { success: false, message: '保存ボタンが見つかりません' };
+                        }
+                    }
+                """)
+                
+                if save_result['success']:
+                    logger.info(save_result['message'])
+                else:
+                    logger.error(save_result['message'])
+                    # フォールバック：通常のクリック
+                    try:
+                        await page.click('button:has-text("保存")')
+                        logger.info("フォールバック方式で保存ボタンをクリックしました")
+                    except Exception as e:
+                        logger.error(f"フォールバック保存ボタンクリックでエラー: {e}")
+                        return False
                 
             except PlaywrightTimeoutError:
                 logger.warning("画像サイズ調整ダイアログが表示されませんでした（直接挿入された可能性があります）")
