@@ -330,38 +330,61 @@ class PhotoGalleryManager:
                 # 少し待機してから保存
                 await asyncio.sleep(1)
                 
-                # JavaScriptで保存ボタンを確実にクリック
+                # 方法1: ダイアログ内の保存ボタンを正確に特定してクリック
                 save_result = await page.evaluate("""
                     () => {
-                        // 全てのボタンを検索
-                        const buttons = document.querySelectorAll('button');
-                        let saveButton = null;
+                        // ダイアログ内の保存ボタンを特定
+                        const dialog = document.querySelector('[role="dialog"]') || 
+                                       document.querySelector('.modal') ||
+                                       document.querySelector('[aria-modal="true"]') ||
+                                       document.querySelector('div[style*="position: fixed"]');
                         
-                        // テキスト内容で「保存」ボタンを探す
-                        for (let btn of buttons) {
+                        if (dialog) {
+                            const saveButtons = dialog.querySelectorAll('button');
+                            for (let btn of saveButtons) {
+                                const text = btn.textContent || btn.innerText || '';
+                                if (text.includes('保存') && btn.offsetParent !== null) {
+                                    console.log('ダイアログ内の保存ボタンを発見:', {
+                                        text: text,
+                                        rect: btn.getBoundingClientRect()
+                                    });
+                                    btn.click();
+                                    return { success: true, message: 'ダイアログ内の保存ボタンをクリックしました' };
+                                }
+                            }
+                        }
+                        
+                        // 方法2: 全ボタンから画像サイズ調整ダイアログの保存ボタンを特定
+                        const allButtons = document.querySelectorAll('button');
+                        let dialogSaveButton = null;
+                        
+                        for (let btn of allButtons) {
                             const text = btn.textContent || btn.innerText || '';
-                            if (text.includes('保存') && btn.offsetParent !== null) {
-                                saveButton = btn;
+                            const rect = btn.getBoundingClientRect();
+                            
+                            // 画像サイズ調整ダイアログの保存ボタンの特徴
+                            // - テキストが「保存」
+                            // - 画面の中央下部に位置
+                            // - 「下書き保存」ではない
+                            if (text === '保存' && 
+                                rect.y > 500 && 
+                                rect.x > 600 && 
+                                btn.offsetParent !== null) {
+                                dialogSaveButton = btn;
                                 break;
                             }
                         }
                         
-                        if (saveButton) {
-                            // ボタンの詳細情報をログ出力
-                            const style = window.getComputedStyle(saveButton);
-                            console.log('保存ボタン詳細:', {
-                                text: saveButton.textContent,
-                                backgroundColor: style.backgroundColor,
-                                color: style.color,
-                                visible: saveButton.offsetParent !== null,
-                                rect: saveButton.getBoundingClientRect()
+                        if (dialogSaveButton) {
+                            console.log('画像サイズ調整ダイアログの保存ボタンを発見:', {
+                                text: dialogSaveButton.textContent,
+                                rect: dialogSaveButton.getBoundingClientRect()
                             });
-                            
-                            saveButton.click();
-                            return { success: true, message: '保存ボタンをクリックしました' };
-                        } else {
-                            return { success: false, message: '保存ボタンが見つかりません' };
+                            dialogSaveButton.click();
+                            return { success: true, message: '画像サイズ調整ダイアログの保存ボタンをクリックしました' };
                         }
+                        
+                        return { success: false, message: '画像サイズ調整ダイアログの保存ボタンが見つかりません' };
                     }
                 """)
                 
@@ -369,13 +392,20 @@ class PhotoGalleryManager:
                     logger.info(save_result['message'])
                 else:
                     logger.error(save_result['message'])
-                    # フォールバック：通常のクリック
+                    # フォールバック：インデックス指定でクリック
                     try:
-                        await page.click('button:has-text("保存")')
-                        logger.info("フォールバック方式で保存ボタンをクリックしました")
+                        # 画像サイズ調整ダイアログが表示されている場合、通常インデックス3が保存ボタン
+                        await page.click('button >> nth=2')  # 3番目のボタン（0ベース）
+                        logger.info("インデックス指定で保存ボタンをクリックしました")
                     except Exception as e:
-                        logger.error(f"フォールバック保存ボタンクリックでエラー: {e}")
-                        return False
+                        logger.error(f"インデックス指定保存ボタンクリックでエラー: {e}")
+                        # 最終フォールバック：座標クリック
+                        try:
+                            await page.click('css=body', position={'x': 760, 'y': 623})
+                            logger.info("座標指定で保存ボタンをクリックしました")
+                        except Exception as e2:
+                            logger.error(f"座標指定保存ボタンクリックでエラー: {e2}")
+                            return False
                 
             except PlaywrightTimeoutError:
                 logger.warning("画像サイズ調整ダイアログが表示されませんでした（直接挿入された可能性があります）")
