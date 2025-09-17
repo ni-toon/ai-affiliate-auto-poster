@@ -273,9 +273,36 @@ class PhotoGalleryManager:
         try:
             logger.info("選択された画像を挿入しています...")
             
-            # 「この画像を挿入」ボタンをクリック
-            await page.wait_for_selector('button:has-text("この画像を挿入")', timeout=5000)
-            await page.click('button:has-text("この画像を挿入")')
+            # JavaScriptで「この画像を挿入」ボタンを検索してクリック
+            insert_result = await page.evaluate("""
+                () => {
+                    // 全てのボタンを検索
+                    const buttons = document.querySelectorAll('button');
+                    let insertButton = null;
+                    
+                    // テキスト内容で「この画像を挿入」ボタンを探す
+                    for (let btn of buttons) {
+                        const text = btn.textContent || btn.innerText || '';
+                        if (text.includes('この画像を挿入')) {
+                            insertButton = btn;
+                            break;
+                        }
+                    }
+                    
+                    if (insertButton && insertButton.offsetParent !== null) {
+                        insertButton.click();
+                        return { success: true, message: '画像挿入ボタンをクリックしました' };
+                    } else {
+                        return { success: false, message: '画像挿入ボタンが見つかりません' };
+                    }
+                }
+            """)
+            
+            if not insert_result['success']:
+                logger.error(insert_result['message'])
+                return False
+            
+            logger.info(insert_result['message'])
             
             # サイズ調整画面の表示待機
             await page.wait_for_selector('button:has-text("保存")', timeout=10000)
