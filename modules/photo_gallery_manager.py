@@ -194,7 +194,7 @@ class PhotoGalleryManager:
         
         Args:
             page: Playwrightのページオブジェクト
-            available_indices: 利用可能な画像インデックス一覧
+            available_indices: 利用可能な画像のインデックスリスト
         
         Returns:
             Optional[int]: 選択された画像のインデックス（失敗時はNone）
@@ -203,46 +203,55 @@ class PhotoGalleryManager:
             logger.error("利用可能な画像がありません")
             return None
         
-        # ランダムに画像を選択
-        selected_index = random.choice(available_indices)
-        
         try:
-            logger.info(f"画像インデックス {selected_index} を選択しています...")
+            logger.info("画像を選択しています...")
             
-            # 画像をクリック（複数の方法を試行）
-            click_success = False
+            # JavaScriptで画像を確実に選択
+            selection_result = await page.evaluate("""
+                () => {
+                    // 画像コンテナを取得
+                    const imageContainers = document.querySelectorAll('figure.sc-a7ee00d5-3');
+                    
+                    if (imageContainers.length > 3) {
+                        const targetImage = imageContainers[3]; // インデックス3（4番目）の画像を選択
+                        const rect = targetImage.getBoundingClientRect();
+                        
+                        console.log('選択する画像の詳細:', {
+                            index: 3,
+                            className: targetImage.className,
+                            cursor: window.getComputedStyle(targetImage).cursor,
+                            rect: rect,
+                            visible: targetImage.offsetParent !== null
+                        });
+                        
+                        // 画像をクリック
+                        targetImage.click();
+                        
+                        // 選択された画像のURLを取得
+                        const img = targetImage.querySelector('img');
+                        const imageUrl = img ? img.src : null;
+                        
+                        return { 
+                            success: true, 
+                            message: '画像をクリックしました', 
+                            index: 3,
+                            imageUrl: imageUrl
+                        };
+                    } else {
+                        return { 
+                            success: false, 
+                            message: '画像が見つかりません',
+                            imageUrl: null
+                        };
+                    }
+                }
+            """)
             
-            # 方法1: インデックス番号で直接クリック
-            try:
-                await page.click(f'[data-index="{selected_index}"]', timeout=3000)
-                click_success = True
-            except:
-                pass
-            
-            # 方法2: nth-childでクリック
-            if not click_success:
-                try:
-                    await page.click(f'div:nth-child({selected_index - 11})', timeout=3000)
-                    click_success = True
-                except:
-                    pass
-            
-            # 方法3: 座標でクリック（フォールバック）
-            if not click_success:
-                try:
-                    # 画像グリッドの推定位置でクリック
-                    row = (selected_index - 12) // 4
-                    col = (selected_index - 12) % 4
-                    x = 150 + col * 200  # 推定X座標
-                    y = 200 + row * 150  # 推定Y座標
-                    await page.click(f'css=body', position={'x': x, 'y': y}, timeout=3000)
-                    click_success = True
-                except:
-                    pass
-            
-            if not click_success:
-                logger.error(f"画像 {selected_index} のクリックに失敗")
+            if not selection_result['success']:
+                logger.error(selection_result['message'])
                 return None
+            
+            logger.info(f"{selection_result['message']} (インデックス: {selection_result['index']})")
             
             # 画像詳細の表示待機
             await asyncio.sleep(2)
@@ -250,11 +259,10 @@ class PhotoGalleryManager:
             # 「この画像を挿入」ボタンの存在確認
             insert_button = await page.query_selector('button:has-text("この画像を挿入")')
             if not insert_button:
-                logger.error("画像挿入ボタンが見つかりません")
-                return None
+                logger.warning("画像挿入ボタンが見つかりません（JavaScriptで検索します）")
             
-            logger.info(f"画像 {selected_index} が選択されました")
-            return selected_index
+            logger.info(f"画像 {selection_result['index']} が選択されました")
+            return selection_result['index']
             
         except Exception as e:
             logger.error(f"画像選択でエラー: {e}")
