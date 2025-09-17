@@ -273,7 +273,7 @@ class PhotoGalleryManager:
         try:
             logger.info("選択された画像を挿入しています...")
             
-            # JavaScriptで「この画像を挿入」ボタンを検索してクリック
+            # JavaScriptで黒い「この画像を挿入」ボタンを検索してクリック
             insert_result = await page.evaluate("""
                 () => {
                     // 全てのボタンを検索
@@ -290,8 +290,17 @@ class PhotoGalleryManager:
                     }
                     
                     if (insertButton && insertButton.offsetParent !== null) {
+                        // ボタンの詳細情報をログ出力
+                        const style = window.getComputedStyle(insertButton);
+                        console.log('挿入ボタン詳細:', {
+                            text: insertButton.textContent,
+                            backgroundColor: style.backgroundColor,
+                            color: style.color,
+                            visible: insertButton.offsetParent !== null
+                        });
+                        
                         insertButton.click();
-                        return { success: true, message: '画像挿入ボタンをクリックしました' };
+                        return { success: true, message: '黒い画像挿入ボタンをクリックしました' };
                     } else {
                         return { success: false, message: '画像挿入ボタンが見つかりません' };
                     }
@@ -304,14 +313,20 @@ class PhotoGalleryManager:
             
             logger.info(insert_result['message'])
             
-            # サイズ調整画面の表示待機
-            await page.wait_for_selector('button:has-text("保存")', timeout=10000)
-            
-            # 少し待機してから保存
-            await asyncio.sleep(1)
-            
-            # 保存ボタンをクリック
-            await page.click('button:has-text("保存")')
+            # 画像サイズ調整ダイアログの表示待機
+            try:
+                await page.wait_for_selector('button:has-text("保存")', timeout=10000)
+                logger.info("画像サイズ調整ダイアログが表示されました")
+                
+                # 少し待機してから保存
+                await asyncio.sleep(1)
+                
+                # 保存ボタンをクリック
+                await page.click('button:has-text("保存")')
+                logger.info("画像サイズ調整を保存しました")
+                
+            except PlaywrightTimeoutError:
+                logger.warning("画像サイズ調整ダイアログが表示されませんでした（直接挿入された可能性があります）")
             
             # 画像挿入完了の待機
             await asyncio.sleep(3)
