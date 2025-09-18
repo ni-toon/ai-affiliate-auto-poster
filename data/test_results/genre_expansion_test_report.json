@@ -1,0 +1,72 @@
+{
+  "test_date": "2024-12-19",
+  "total_genres": 8,
+  "available_genres": [
+    "占い",
+    "フィットネス",
+    "書籍",
+    "家電・ガジェット",
+    "美容・パーソナルケア",
+    "アウトドア・スポーツ",
+    "ヘルスケア・見守り",
+    "キッチン・時短家事"
+  ],
+  "genre_details": {
+    "占い": {
+      "sample_product": "タロットカード 初心者向けセット",
+      "price_range": "2000-5000",
+      "image_category": "モノ",
+      "photo_category": "モノ",
+      "status": "OK"
+    },
+    "フィットネス": {
+      "sample_product": "可変式ダンベル セット",
+      "price_range": "15000-30000",
+      "image_category": "人物",
+      "photo_category": "人物",
+      "status": "OK"
+    },
+    "書籍": {
+      "sample_product": "ハーバード、スタンフォード、オックスフォード… 科学的に証明された すごい習慣大百科",
+      "price_range": "1600-2200",
+      "image_category": "モノ",
+      "photo_category": "モノ",
+      "status": "OK"
+    },
+    "家電・ガジェット": {
+      "sample_product": "Wi-Fi 6 ルーター 高速通信",
+      "price_range": "8000-25000",
+      "image_category": "モノ",
+      "photo_category": "モノ",
+      "status": "OK"
+    },
+    "美容・パーソナルケア": {
+      "sample_product": "美顔器 RF温熱 EMS",
+      "price_range": "8000-25000",
+      "image_category": "モノ",
+      "photo_category": "モノ",
+      "status": "OK"
+    },
+    "アウトドア・スポーツ": {
+      "sample_product": "キャンプチェア 軽量 コンパクト",
+      "price_range": "3000-8000",
+      "image_category": "風景",
+      "photo_category": "風景",
+      "status": "OK"
+    },
+    "ヘルスケア・見守り": {
+      "sample_product": "マッサージガン 筋膜リリース",
+      "price_range": "5000-15000",
+      "image_category": "モノ",
+      "photo_category": "モノ",
+      "status": "OK"
+    },
+    "キッチン・時短家事": {
+      "sample_product": "フライパン セット IH対応",
+      "price_range": "3000-10000",
+      "image_category": "食べ物",
+      "photo_category": "食べ物",
+      "status": "OK"
+    }
+  }
+}

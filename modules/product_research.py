@@ -1,6 +1,6 @@
 """
-商品リサーチモジュール
-占い、フィットネス、書籍分野の人気商品をリサーチし、
+商品リサーチモジュール（拡張版）
+多様な分野の人気商品をリサーチし、
 Amazonアソシエイトリンクを生成する機能を提供
 """
 
@@ -140,7 +140,239 @@ class ProductResearcher:
                     "price_range": "1500-2000",
                     "description": "お金の基本知識から投資まで学べる実用書"
                 }
+            ],
+            "家電・ガジェット": [
+                {
+                    "name": "ワイヤレスイヤホン Bluetooth5.3",
+                    "category": "オーディオ機器",
+                    "keywords": ["ワイヤレスイヤホン", "Bluetooth", "ノイズキャンセリング"],
+                    "price_range": "5000-15000",
+                    "description": "高音質でノイズキャンセリング機能付きのワイヤレスイヤホン"
+                },
+                {
+                    "name": "スマートフォン 急速充電器 65W",
+                    "category": "充電器",
+                    "keywords": ["急速充電器", "USB-C", "PD対応"],
+                    "price_range": "2000-5000",
+                    "description": "USB-C PD対応の高速充電器でスマホを素早く充電"
+                },
+                {
+                    "name": "ロボット掃除機 自動充電",
+                    "category": "掃除機",
+                    "keywords": ["ロボット掃除機", "自動充電", "スマート"],
+                    "price_range": "20000-50000",
+                    "description": "自動充電機能付きで賢く掃除するロボット掃除機"
+                },
+                {
+                    "name": "空気清浄機 HEPA フィルター",
+                    "category": "空調家電",
+                    "keywords": ["空気清浄機", "HEPA", "花粉対策"],
+                    "price_range": "10000-30000",
+                    "description": "HEPAフィルター搭載で花粉やPM2.5を除去する空気清浄機"
+                },
+                {
+                    "name": "電気圧力鍋 4L 自動調理",
+                    "category": "調理家電",
+                    "keywords": ["電気圧力鍋", "自動調理", "時短"],
+                    "price_range": "8000-20000",
+                    "description": "ボタン一つで本格料理が作れる電気圧力鍋"
+                },
+                {
+                    "name": "Wi-Fi 6 ルーター 高速通信",
+                    "category": "ネットワーク機器",
+                    "keywords": ["Wi-Fi6", "ルーター", "高速通信"],
+                    "price_range": "8000-25000",
+                    "description": "最新Wi-Fi 6対応で高速インターネット通信を実現"
+                }
+            ],
+            "美容・パーソナルケア": [
+                {
+                    "name": "ドライヤー マイナスイオン 大風量",
+                    "category": "ヘアケア",
+                    "keywords": ["ドライヤー", "マイナスイオン", "大風量"],
+                    "price_range": "5000-15000",
+                    "description": "マイナスイオンで髪をサラサラに仕上げる大風量ドライヤー"
+                },
+                {
+                    "name": "電動歯ブラシ 音波振動",
+                    "category": "オーラルケア",
+                    "keywords": ["電動歯ブラシ", "音波振動", "歯垢除去"],
+                    "price_range": "3000-10000",
+                    "description": "音波振動で効果的に歯垢を除去する電動歯ブラシ"
+                },
+                {
+                    "name": "美顔器 RF温熱 EMS",
+                    "category": "美容機器",
+                    "keywords": ["美顔器", "RF", "EMS", "リフトアップ"],
+                    "price_range": "8000-25000",
+                    "description": "RF温熱とEMSでリフトアップ効果が期待できる美顔器"
+                },
+                {
+                    "name": "プロテイン ホエイ 美容成分配合",
+                    "category": "サプリメント",
+                    "keywords": ["プロテイン", "美容", "コラーゲン"],
+                    "price_range": "3000-8000",
+                    "description": "美容成分配合で内側からキレイをサポートするプロテイン"
+                },
+                {
+                    "name": "ヘアアイロン ストレート カール 2way",
+                    "category": "ヘアケア",
+                    "keywords": ["ヘアアイロン", "ストレート", "カール"],
+                    "price_range": "3000-12000",
+                    "description": "ストレートもカールも自在に作れる2wayヘアアイロン"
+                },
+                {
+                    "name": "スキンケア セット 保湿",
+                    "category": "スキンケア",
+                    "keywords": ["スキンケア", "保湿", "美容液"],
+                    "price_range": "3000-10000",
+                    "description": "保湿効果の高いスキンケアセットで美肌をキープ"
+                }
+            ],
+            "アウトドア・スポーツ": [
+                {
+                    "name": "テント 2人用 軽量 防水",
+                    "category": "キャンプ用品",
+                    "keywords": ["テント", "2人用", "軽量", "防水"],
+                    "price_range": "8000-20000",
+                    "description": "軽量で防水性に優れた2人用テント"
+                },
+                {
+                    "name": "ランニングシューズ クッション性",
+                    "category": "スポーツシューズ",
+                    "keywords": ["ランニングシューズ", "クッション", "軽量"],
+                    "price_range": "5000-15000",
+                    "description": "クッション性に優れた軽量ランニングシューズ"
+                },
+                {
+                    "name": "登山リュック 40L 軽量",
+                    "category": "登山用品",
+                    "keywords": ["登山リュック", "40L", "軽量", "防水"],
+                    "price_range": "8000-20000",
+                    "description": "軽量で機能性に優れた40L登山リュック"
+                },
+                {
+                    "name": "キャンプチェア 軽量 コンパクト",
+                    "category": "キャンプ用品",
+                    "keywords": ["キャンプチェア", "軽量", "コンパクト"],
+                    "price_range": "3000-8000",
+                    "description": "持ち運びやすい軽量コンパクトなキャンプチェア"
+                },
+                {
+                    "name": "スポーツウォッチ GPS機能",
+                    "category": "スポーツ用品",
+                    "keywords": ["スポーツウォッチ", "GPS", "ランニング"],
+                    "price_range": "10000-30000",
+                    "description": "GPS機能付きでランニングやトレーニングをサポート"
+                },
+                {
+                    "name": "クーラーボックス 大容量",
+                    "category": "キャンプ用品",
+                    "keywords": ["クーラーボックス", "大容量", "保冷"],
+                    "price_range": "5000-15000",
+                    "description": "大容量で長時間保冷できるクーラーボックス"
+                }
+            ],
+            "ヘルスケア・見守り": [
+                {
+                    "name": "体組成計 Bluetooth対応",
+                    "category": "健康機器",
+                    "keywords": ["体組成計", "Bluetooth", "スマホ連携"],
+                    "price_range": "3000-8000",
+                    "description": "Bluetooth対応でスマホと連携できる高機能体組成計"
+                },
+                {
+                    "name": "血圧計 上腕式 自動測定",
+                    "category": "健康機器",
+                    "keywords": ["血圧計", "上腕式", "自動測定"],
+                    "price_range": "5000-12000",
+                    "description": "正確な測定ができる上腕式自動血圧計"
+                },
+                {
+                    "name": "睡眠グッズ アイマスク 耳栓セット",
+                    "category": "睡眠用品",
+                    "keywords": ["睡眠", "アイマスク", "耳栓"],
+                    "price_range": "1000-3000",
+                    "description": "快適な睡眠をサポートするアイマスクと耳栓のセット"
+                },
+                {
+                    "name": "マッサージガン 筋膜リリース",
+                    "category": "マッサージ機器",
+                    "keywords": ["マッサージガン", "筋膜リリース", "疲労回復"],
+                    "price_range": "5000-15000",
+                    "description": "筋膜リリースで疲労回復をサポートするマッサージガン"
+                },
+                {
+                    "name": "パルスオキシメータ 血中酸素濃度",
+                    "category": "健康機器",
+                    "keywords": ["パルスオキシメータ", "血中酸素", "健康管理"],
+                    "price_range": "2000-5000",
+                    "description": "血中酸素濃度を簡単に測定できるパルスオキシメータ"
+                },
+                {
+                    "name": "体温計 非接触式 デジタル",
+                    "category": "健康機器",
+                    "keywords": ["体温計", "非接触", "デジタル"],
+                    "price_range": "2000-6000",
+                    "description": "非接触で素早く正確に体温を測定できるデジタル体温計"
+                }
+            ],
+            "キッチン・時短家事": [
+                {
+                    "name": "フライパン セット IH対応",
+                    "category": "調理器具",
+                    "keywords": ["フライパン", "セット", "IH対応"],
+                    "price_range": "3000-10000",
+                    "description": "IH対応で使いやすいフライパンセット"
+                },
+                {
+                    "name": "真空保存容器 セット",
+                    "category": "保存容器",
+                    "keywords": ["真空保存", "容器", "食材保存"],
+                    "price_range": "2000-6000",
+                    "description": "食材を新鮮に保つ真空保存容器セット"
+                },
+                {
+                    "name": "食洗機用洗剤 大容量",
+                    "category": "洗剤",
+                    "keywords": ["食洗機", "洗剤", "大容量"],
+                    "price_range": "1000-3000",
+                    "description": "食洗機専用の高性能洗剤大容量タイプ"
+                },
+                {
+                    "name": "コーヒーメーカー 全自動",
+                    "category": "調理家電",
+                    "keywords": ["コーヒーメーカー", "全自動", "ドリップ"],
+                    "price_range": "8000-25000",
+                    "description": "豆から挽いて淹れる全自動コーヒーメーカー"
+                },
+                {
+                    "name": "電気ケトル 温度調節機能",
+                    "category": "調理家電",
+                    "keywords": ["電気ケトル", "温度調節", "保温"],
+                    "price_range": "3000-8000",
+                    "description": "温度調節機能付きで様々な用途に使える電気ケトル"
+                },
+                {
+                    "name": "包丁セット ステンレス",
+                    "category": "調理器具",
+                    "keywords": ["包丁", "セット", "ステンレス"],
+                    "price_range": "5000-15000",
+                    "description": "切れ味抜群のステンレス製包丁セット"
+                }
             ]
+        }
+        
+        # ジャンル別の画像カテゴリマッピング
+        self.image_category_mapping = {
+            "占い": "モノ",
+            "フィットネス": "人物", 
+            "書籍": "モノ",
+            "家電・ガジェット": "モノ",
+            "美容・パーソナルケア": "モノ",
+            "アウトドア・スポーツ": "風景",
+            "ヘルスケア・見守り": "モノ",
+            "キッチン・時短家事": "食べ物"
         }
     
     def get_random_product(self, category: str = None) -> Dict:
@@ -154,25 +386,48 @@ class ProductResearcher:
         product["selected_category"] = selected_category
         return product
     
+    def get_image_category(self, genre: str) -> str:
+        """ジャンルに対応する画像カテゴリを取得"""
+        return self.image_category_mapping.get(genre, "モノ")
+    
+    def get_available_genres(self) -> List[str]:
+        """利用可能なジャンル一覧を取得"""
+        return list(self.categories.keys())
+    
     def generate_amazon_link(self, product_name: str, keywords: List[str] = None) -> str:
         """商品名とキーワードからAmazonアソシエイトリンクを生成"""
         # 商品名に基づいて実際のAmazon商品URLを生成
         product_mappings = {
+            # 占い関連
             "ゲッターズ飯田の五星三心占い2024完全版": "https://www.amazon.co.jp/dp/4074538091",
             "タロットカード 初心者向けセット": "https://www.amazon.co.jp/dp/B08XQJZM9H",
             "78枚のカードで占う、いちばんていねいなタロット": "https://www.amazon.co.jp/dp/4816368914",
             "パワーストーン ブレスレット": "https://www.amazon.co.jp/dp/B07QBXM8KL",
             "風水開運グッズセット": "https://www.amazon.co.jp/dp/B08XYZT5PQ",
-            "ハーバード、スタンフォード、オックスフォード… 科学的に証明された すごい習慣大百科": "https://www.amazon.co.jp/dp/4866801441",
-            "人生を変える習慣のつくり方": "https://www.amazon.co.jp/dp/4799327046",
-            "原因と結果の法則": "https://www.amazon.co.jp/dp/4763195093",
-            "7つの習慣": "https://www.amazon.co.jp/dp/4863940246",
-            "思考は現実化する": "https://www.amazon.co.jp/dp/4877710515",
-            "プロテイン ホエイ 1kg": "https://www.amazon.co.jp/dp/B07QBXM8KL",
-            "ダンベル 可変式 20kg": "https://www.amazon.co.jp/dp/B08XYZT5PQ",
-            "ヨガマット 厚手 10mm": "https://www.amazon.co.jp/dp/B07QBXM8KL",
-            "フィットネスバンド セット": "https://www.amazon.co.jp/dp/B08XYZT5PQ",
-            "筋トレが最強のソリューションである": "https://www.amazon.co.jp/dp/4866801441"
+            
+            # フィットネス関連
+            "STEADY フィットネスバイク エアロバイク": "https://www.amazon.co.jp/dp/B08XYZT5PQ",
+            "可変式ダンベル セット": "https://www.amazon.co.jp/dp/B07QBXM8KL",
+            "腹筋ローラー": "https://www.amazon.co.jp/dp/B08XYZT5PQ",
+            "レジスタンスバンド セット": "https://www.amazon.co.jp/dp/B07QBXM8KL",
+            "ヨガマット": "https://www.amazon.co.jp/dp/B08XYZT5PQ",
+            "プロテイン ホエイ": "https://www.amazon.co.jp/dp/B07QBXM8KL",
+            
+            # 書籍関連
+            "嫌われる勇気": "https://www.amazon.co.jp/dp/4866801441",
+            "変な家2 ～11の間取り図～": "https://www.amazon.co.jp/dp/4799327046",
+            "ハーバード、スタンフォード、オックスフォード… 科学的に証明された すごい習慣大百科": "https://www.amazon.co.jp/dp/4763195093",
+            "世界の一流は「雑談」で何を話しているのか": "https://www.amazon.co.jp/dp/4863940246",
+            "DIE WITH ZERO 人生が豊かになりすぎる究極のルール": "https://www.amazon.co.jp/dp/4877710515",
+            "改訂版 本当の自由を手に入れる お金の大学": "https://www.amazon.co.jp/dp/4866801441",
+            
+            # 家電・ガジェット関連
+            "ワイヤレスイヤホン Bluetooth5.3": "https://www.amazon.co.jp/dp/B08XYZT5PQ",
+            "スマートフォン 急速充電器 65W": "https://www.amazon.co.jp/dp/B07QBXM8KL",
+            "ロボット掃除機 自動充電": "https://www.amazon.co.jp/dp/B08XYZT5PQ",
+            "空気清浄機 HEPA フィルター": "https://www.amazon.co.jp/dp/B07QBXM8KL",
+            "電気圧力鍋 4L 自動調理": "https://www.amazon.co.jp/dp/B08XYZT5PQ",
+            "Wi-Fi 6 ルーター 高速通信": "https://www.amazon.co.jp/dp/B07QBXM8KL"
         }
         
         # 商品名に対応するURLがある場合はそれを使用
@@ -217,73 +472,43 @@ class ProductResearcher:
         
         return results
     
-    def get_products_for_article(self, article_type: str, count: int = 3) -> List[Dict]:
-        """記事タイプに応じた商品を選択"""
-        products = []
+    def get_products_for_article(self, genre: str, num_products: int = 3) -> List[Dict]:
+        """記事用の商品リストを取得"""
+        if genre not in self.categories:
+            # 指定されたジャンルがない場合はランダムに選択
+            genre = random.choice(list(self.categories.keys()))
         
-        if article_type == "レビュー":
-            # レビュー記事では1つの商品に集中
-            category = random.choice(list(self.categories.keys()))
-            product = self.get_random_product(category)
+        products = self.categories[genre]
+        
+        # 指定された数の商品をランダムに選択
+        if len(products) <= num_products:
+            selected_products = products.copy()
+        else:
+            selected_products = random.sample(products, num_products)
+        
+        # Amazonリンクを追加
+        for product in selected_products:
             product["amazon_link"] = self.generate_amazon_link(
                 product["name"], 
                 product["keywords"]
             )
-            products.append(product)
         
-        elif article_type == "商品紹介":
-            # 商品紹介では同じカテゴリから複数商品
-            category = random.choice(list(self.categories.keys()))
-            available_products = self.categories[category].copy()
-            random.shuffle(available_products)
-            
-            for i in range(min(count, len(available_products))):
-                product = available_products[i].copy()
-                product["selected_category"] = category
-                product["amazon_link"] = self.generate_amazon_link(
-                    product["name"], 
-                    product["keywords"]
-                )
-                products.append(product)
-        
-        elif article_type == "ハウツー":
-            # ハウツー記事では関連商品を紹介
-            category = random.choice(list(self.categories.keys()))
-            product = self.get_random_product(category)
-            product["amazon_link"] = self.generate_amazon_link(
-                product["name"], 
-                product["keywords"]
-            )
-            products.append(product)
-        
-        return products
-    
-    def save_product_data(self, filepath: str):
-        """商品データをJSONファイルに保存"""
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(self.categories, f, ensure_ascii=False, indent=2)
-    
-    def load_product_data(self, filepath: str):
-        """JSONファイルから商品データを読み込み"""
-        try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                self.categories = json.load(f)
-        except FileNotFoundError:
-            print(f"商品データファイル {filepath} が見つかりません。デフォルトデータを使用します。")
+        return selected_products
 
-# 使用例
 if __name__ == "__main__":
+    # テスト実行
     researcher = ProductResearcher()
     
-    # ランダムな商品を取得
-    product = researcher.get_random_product()
-    print(f"選択された商品: {product['name']}")
-    print(f"カテゴリ: {product['selected_category']}")
-    print(f"Amazonリンク: {researcher.generate_amazon_link(product['name'], product['keywords'])}")
+    print("=== 利用可能なジャンル ===")
+    for genre in researcher.get_available_genres():
+        print(f"- {genre}")
     
-    # 記事用の商品を取得
-    products = researcher.get_products_for_article("商品紹介", 3)
-    print(f"\n商品紹介記事用の商品:")
-    for i, p in enumerate(products, 1):
-        print(f"{i}. {p['name']} - {p['amazon_link']}")
+    print("\n=== 各ジャンルのサンプル商品 ===")
+    for genre in researcher.get_available_genres():
+        product = researcher.get_random_product(genre)
+        print(f"\n【{genre}】")
+        print(f"商品名: {product['name']}")
+        print(f"価格帯: {product['price_range']}円")
+        print(f"説明: {product['description']}")
+        print(f"画像カテゴリ: {researcher.get_image_category(genre)}")
 
