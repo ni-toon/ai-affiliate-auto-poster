@@ -207,9 +207,14 @@ class PhotoGalleryManager:
             # フォールバック：一般的なインデックス範囲を返す
             return list(range(12, 35))
     
+    # photo_gallery_manager.py
+
+# ... (他のメソッドはそのまま) ...
+
+# ▼▼▼ select_random_image メソッドをこちらに置き換えてください ▼▼▼
     async def select_random_image(self, page: Page, available_indices: List[int]) -> Optional[int]:
         """
-        利用可能な画像からランダムに選択
+        利用可能な画像からランダムに1つ選択し、クリックする。
         
         Args:
             page: Playwrightのページオブジェクト
@@ -225,69 +230,92 @@ class PhotoGalleryManager:
         try:
             logger.info("画像を選択しています...")
             
-            # JavaScriptで画像を確実に選択
-            selection_result = await page.evaluate("""
-                () => {
-                    // 画像コンテナを取得
-                    const imageContainers = document.querySelectorAll('figure.sc-a7ee00d5-3');
-                    
-                    if (imageContainers.length > 3) {
-                        const targetImage = imageContainers[3]; // インデックス3（4番目）の画像を選択
-                        const rect = targetImage.getBoundingClientRect();
-                        
-                        console.log('選択する画像の詳細:', {
-                            index: 3,
-                            className: targetImage.className,
-                            cursor: window.getComputedStyle(targetImage).cursor,
-                            rect: rect,
-                            visible: targetImage.offsetParent !== null
-                        });
-                        
-                        // 画像をクリック
-                        targetImage.click();
-                        
-                        // 選択された画像のURLを取得
-                        const img = targetImage.querySelector('img');
-                        const imageUrl = img ? img.src : null;
-                        
-                        return { 
-                            success: true, 
-                            message: '画像をクリックしました', 
-                            index: 3,
-                            imageUrl: imageUrl
-                        };
-                    } else {
-                        return { 
-                            success: false, 
-                            message: '画像が見つかりません',
-                            imageUrl: null
-                        };
-                    }
-                }
-            """)
+            # 複数の画像コンテナを特定するセレクタ
+            # note.comのUIでは figure タグで画像が囲まれていることが多い
+            image_selector = "figure.sc-a7ee00d5-3"
             
-            if not selection_result['success']:
-                logger.error(selection_result['message'])
+            # 画像が表示されるまで待機
+            await page.wait_for_selector(image_selector, state="visible", timeout=10000)
+            
+            # すべての画像要素を取得
+            images = await page.query_selector_all(image_selector)
+            
+            if not images:
+                logger.error("クリック対象の画像要素が見つかりません。")
                 return None
+                
+            # 4番目の画像を選択（インデックス3）。リストの範囲外にならないようにチェック
+            image_index_to_click = 3
+            if len(images) <= image_index_to_click:
+                logger.warning(f"画像の数が足りないため、最後の画像（インデックス: {len(images) - 1}）を選択します。")
+                image_index_to_click = len(images) - 1
+
+            # 選択した画像をクリック
+            target_image = images[image_index_to_click]
+            await target_image.click()
             
-            logger.info(f"{selection_result['message']} (インデックス: {selection_result['index']})")
+            logger.info(f"画像をクリックしました (インデックス: {image_index_to_click})")
             
-            # 画像詳細の表示待機
-            await asyncio.sleep(2)
+            # 画像詳細（「次へ」ボタンなど）が表示されるのを待つ
+            await page.wait_for_timeout(1500)
             
-            # 「この画像を挿入」ボタンの存在確認
-            insert_button = await page.query_selector('button:has-text("この画像を挿入")')
-            if not insert_button:
-                logger.warning("画像挿入ボタンが見つかりません（JavaScriptで検索します）")
-            
-            logger.info(f"画像 {selection_result['index']} が選択されました")
-            return selection_result['index']
-            
-        except Exception as e:
-            logger.error(f"画像選択でエラー: {e}")
+            return image_index_to_click
+
+        except PlaywrightTimeoutError:
+            logger.error("画像コンテナの表示待機中にタイムアウトしました。")
             return None
-    
+        except Exception as e:
+            logger.error(f"画像選択で予期せぬエラー: {e}")
+            return None
+
+    # ▼▼▼ insert_selected_image メソッドをこちらに置き換えてください ▼▼▼
     async def insert_selected_image(self, page: Page) -> bool:
+        """
+        選択された画像を記事に挿入するまでの一連のボタンクリックを処理する。
+        
+        Args:
+            page: Playwrightのページオブジェクト
+        
+        Returns:
+            bool: 成功した場合True
+        """
+        try:
+
+            # --- ステップ2: 「この画像を挿入」ボタンをクリック ---
+            logger.info("「この画像を挿入」ボタンを探しています...")
+            insert_button = page.get_by_role("button", name="この画像を挿入")
+            await insert_button.wait_for(state="visible", timeout=10000)
+            await insert_button.click()
+            logger.info("「この画像を挿入」ボタンをクリックしました。")
+
+            # --- ステップ3: 画像サイズ調整ダイアログの「保存」ボタンをクリック ---
+            logger.info("画像サイズ調整ダイアログの「保存」ボタンを探しています...")
+            # ダイアログ（モーダル）内のボタンとして特定
+            save_button = page.locator('[role="dialog"]').get_by_role("button", name="保存")
+            await save_button.wait_for(state="visible", timeout=10000)
+            await save_button.click()
+            logger.info("画像サイズ調整ダイアログの「保存」ボタンをクリックしました。")
+
+            # 記事エディタに画像が挿入されるのを待つ
+            await page.wait_for_timeout(2000)
+            logger.info("画像が正常に記事へ挿入されました。")
+            
+            return True
+
+        except PlaywrightTimeoutError as e:
+            logger.error(f"ボタンの待機中にタイムアウトしました: {e.message}")
+            # タイムアウト時にスクリーンショットを撮り、デバッグに役立てる
+            await page.screenshot(path="error_screenshot_button_timeout.png")
+            logger.info("タイムアウト時のスクリーンショットを 'error_screenshot_button_timeout.png' として保存しました。")
+            return False
+        except Exception as e:
+            logger.error(f"画像挿入プロセスで予期せぬエラー: {e}")
+            await page.screenshot(path="error_screenshot_unexpected.png")
+            logger.info("予期せぬエラー時のスクリーンショットを 'error_screenshot_unexpected.png' として保存しました。")
+            return False
+
+# ... (以降のメソッドはそのまま) ...
+
         """
         選択された画像を記事に挿入
         

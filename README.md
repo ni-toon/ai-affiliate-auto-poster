@@ -108,9 +108,9 @@ AIによるアフィリエイト記事の自動生成からnote投稿までを�
     Python 3.10以上がインストールされていることを確認してください。
     仮想環境の作成を推奨します。
     ```bash
-    python -m venv venv
-    source venv/bin/activate  # macOS/Linux
-    # venv\Scripts\activate    # Windows
+    py -m venv .venv
+    .\.venv\Scripts\activate
+    python -m pip install -U pip setuptools wheel
     ```
 
 3.  **依存ライブラリのインストール**:

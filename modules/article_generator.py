@@ -54,7 +54,12 @@ class ArticleGenerator:
         self.hashtags_pool = {
             "占い": ["#占い", "#タロット", "#スピリチュアル", "#開運", "#パワーストーン", "#風水"],
             "フィットネス": ["#フィットネス", "#筋トレ", "#ダイエット", "#健康", "#トレーニング", "#エクササイズ"],
-            "書籍": ["#読書", "#本", "#ビジネス書", "#自己啓発", "#おすすめ本", "#書評"]
+            "書籍": ["#読書", "#本", "#ビジネス書", "#自己啓発", "#おすすめ本", "#書評"],
+            "家電・ガジェット": ["#家電", "#ガジェット", "#便利グッズ", "#最新家電", "#レビュー"],
+            "美容・パーソナルケア": ["#美容", "#スキンケア", "#コスメ", "#ヘアケア", "#自分磨き"],
+            "アウトドア・スポーツ": ["#アウトドア", "#キャンプ", "#スポーツ", "#登山", "#ランニング"],
+            "ヘルスケア・見守り": ["#ヘルスケア", "#健康管理", "#見守り", "#セルフケア", "#健康"],
+            "キッチン・時短家事": ["#キッチン", "#時短家事", "#便利グッズ", "#料理", "#暮らしの工夫"]
         }
     
     def generate_seo_title(self, product_info: Dict, article_type: str) -> str:
@@ -302,18 +307,33 @@ class ArticleGenerator:
     def generate_note_tags(self, category: str, article_type: str) -> List[str]:
         """note用のタグを生成"""
         base_tags = self.hashtags_pool.get(category, [])
-        article_tags = {
+        article_tags_pool = {
             "レビュー": ["#レビュー", "#体験談", "#口コミ"],
             "ハウツー": ["#ハウツー", "#初心者向け", "#使い方"],
             "商品紹介": ["#おすすめ", "#比較", "#選び方"]
         }
         
-        # カテゴリタグ2-3個 + 記事タイプタグ2個を選択
-        selected_tags = random.sample(base_tags, min(3, len(base_tags)))
-        selected_tags.extend(random.sample(article_tags[article_type], 2))
+        # --- 修正後のロジック ---
         
-        return selected_tags[:5]  # 最大5個
-    
+        # 1. カテゴリに基づいたタグを安全に選択
+        #    リストの要素数を超えないように、取得するタグの数を決定
+        num_to_select_from_base = min(3, len(base_tags))
+        selected_tags = random.sample(base_tags, num_to_select_from_base)
+        
+        # 2. 記事タイプに基づいたタグを安全に選択
+        article_tags = article_tags_pool.get(article_type, [])
+        num_to_select_from_article = min(2, len(article_tags))
+        
+        # 3. 2種類のタグを結合
+        if num_to_select_from_article > 0:
+            selected_tags.extend(random.sample(article_tags, num_to_select_from_article))
+        
+        # 4. 重複を削除し、最終的なタグリストを生成 (順序は保持)
+        final_tags = list(dict.fromkeys(selected_tags))
+        
+        # 5. 最大5個のタグを返す
+        return final_tags[:5]
+
     def generate_x_post_patterns(self, title: str, note_url: str, category: str) -> List[str]:
         """X投稿用の複数パターンを生成"""
         hashtags = random.sample(self.hashtags_pool.get(category, []), 2)
